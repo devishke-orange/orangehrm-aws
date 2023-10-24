@@ -99,7 +99,7 @@ if [[ -f "$FILE" ]]; then
 	echo -e "${GREEN}OrangeHRM is installed!${ENDCOLOR}"
 else
 	clear
-	cat /home/ec2-user/.orangehrm-scripts/logo
+	cat /home/ec2-user/.orangehrm/assets/LOGO
 	echo -e "\n${GREEN}Starting the OrangeHRM Installation${ENDCOLOR}\n"
 	echo -e "${YELLOW}Checking pre-requisites${ENDCOLOR}...........🚧"
 	check_prereq
@@ -110,7 +110,7 @@ else
 	read -r
 	tput cuu1
 	tput el
-	less -P "Press ENTER to read more, press q to quit" /home/ec2-user/.orangehrm-scripts/LICENSE
+	less -P "Press ENTER to read more, press q to quit" /home/ec2-user/.orangehrm/assets/LICENSE
 	echo -e "Do you agree to the license? ${YELLOW}[yes/no]${ENDCOLOR}"
 	read -rp "> " licenseConfirm
 	while ! [[ $licenseConfirm =~ ^y(e|es)?$|^n(o)?$ ]]
@@ -158,7 +158,7 @@ else
 			read -rp "> " orgName
 		done
 		echo -e "Select your country code ${YELLOW}[type the number]${ENDCOLOR}"
-		select country in $(tr '\n' ' ' < /home/ec2-user/.orangehrm-scripts/countries)
+		select country in $(tr '\n' ' ' < /home/ec2-user/.orangehrm/assets/COUNTRIES)
 		do 
 			if [[ -z "$country" ]]
     		then
