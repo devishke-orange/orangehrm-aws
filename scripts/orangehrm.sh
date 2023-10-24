@@ -15,7 +15,7 @@ then
     help
 elif [[ $1 = "install" ]]
 then
-    sh /home/ec2-user/.orangehrm/scripts/install.sh
+    sh /home/ec2-user/.orangehrm/scripts/install_orangehrm.sh
 elif [[ $1 = "upgrade" ]]
 then
     sh /home/ec2-user/.orangehrm/scripts/upgrade.sh
