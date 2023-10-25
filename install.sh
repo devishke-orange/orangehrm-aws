@@ -156,6 +156,6 @@ echo -e "\nPlease run ${YELLOW}source /home/ec2-user/.bashrc${ENDCOLOR} to activ
 
 sh "${REPO_FOLDER}/scripts/orangehrm.sh"
 
-write_to_log "Installer completed!\n"
+write_to_log "Installer completed!"
 cleanup
 exit 0
