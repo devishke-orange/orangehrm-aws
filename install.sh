@@ -15,12 +15,12 @@ ORANGEHRM_ALIAS_COMMENT="# This alias is related to the orangehrm command"
 WIP_ICON="🚧"
 SUCCESS_ICON="✅"
 ERROR_ICON="🔴"
-runAsRoot=false
 answer=""
 now=$(date)
 
-# Unset all variables
+# Unset all variables and reset color
 cleanup() {
+    echo -e "${ENDCOLOR}"
     unset RED
     unset GREEN
     unset YELLOW
@@ -35,7 +35,6 @@ cleanup() {
     unset WIP_ICON
     unset SUCCESS_ICON
     unset ERROR_ICON
-    unset runAsRoot
     unset answer
     unset now
 }
@@ -87,25 +86,17 @@ echo "#   restore OrangeHRM completely via the terminal.		#"
 echo "#								#"
 echo -e "#################################################################\n"
 
-echo -e "Start the installer? ${YELLOW}[yes/no]${ENDCOLOR}"
-yes_no_check
-if [[ $answer =~ NO_REGEX ]]; then
-    write_to_log "Installer not started"
-    early_exit
-else
-    write_to_log "Installer started"
-fi
-
 echo -e "${YELLOW}Checking permissions${ENDCOLOR}..............${WIP_ICON}"
 # Check if root or sudo
 if ! [[ $(id -u) = 0 ]]; then
     tput cuu1
     echo -e "${RED}Checking permissions${ENDCOLOR}..............${ERROR_ICON}"
+    # No logging since permissions may be insufficient
     echo -e "The script must be run as root or with sudo!"
-    write_to_log "Script not run as root"
-    err_exit
+    cleanup
+    exit 1;
 else
-    runAsRoot=true
+    write_to_log "Installer started"
     write_to_log "Script run as root"
     echo -e "${GREEN}Checking permissions${ENDCOLOR}..............${SUCCESS_ICON}"
 fi
@@ -159,24 +150,18 @@ else
 fi
 
 # Copy the login-script to /etc/profile.d/
-if [[ $runAsRoot = true ]]; then
-    echo -e "${YELLOW}Creating login script${ENDCOLOR}.............${WIP_ICON}"
-    if [[ -f "/etc/profile.d/login_orangehrm.sh" ]]; then
-        tput cuu1
-        echo -e "${YELLOW}Creating login script${ENDCOLOR}.............${ERROR_ICON}"
-        echo "The login script already exists! Please check /etc/profile.d"
-        write_to_log "Login script already exists in /etc/profile.d"
-        err_exit
-    else
-        cp "${REPO_FOLDER}/scripts/login_orangehrm.sh" /etc/profile.d/login_orangehrm.sh 2>>$LOG_FILE
-        tput cuu1
-        echo -e "${GREEN}Creating login script${ENDCOLOR}.............${SUCCESS_ICON}"
-        write_to_log "Login script successfully moved to /etc/profile.d"
-    fi
+echo -e "${YELLOW}Creating login script${ENDCOLOR}.............${WIP_ICON}"
+if [[ -f "/etc/profile.d/login_orangehrm.sh" ]]; then
+    tput cuu1
+    echo -e "${RED}Creating login script${ENDCOLOR}.............${ERROR_ICON}"
+    echo "The login script already exists! Please check /etc/profile.d"
+    write_to_log "Login script already exists in /etc/profile.d"
+    err_exit
 else
-    echo -e "❗ ${YELLOW}Login script was not moved to /etc/profile.d since the script was not run as root${ENDCOLOR}"
-    echo -e "You can run ${GREEN}sudo orangehrm create-login-message${ENDCOLOR} to move it"
-    write_to_log "Login script not moved due to insufficient permissions"
+    cp "${REPO_FOLDER}/scripts/login_orangehrm.sh" /etc/profile.d/login_orangehrm.sh 2>>$LOG_FILE
+    tput cuu1
+    echo -e "${GREEN}Creating login script${ENDCOLOR}.............${SUCCESS_ICON}"
+    write_to_log "Login script successfully moved to /etc/profile.d"
 fi
 
 echo -e "\nPlease run ${YELLOW}source /home/ec2-user/.bashrc${ENDCOLOR} to activate the ${GREEN}orangehrm${ENDCOLOR} command"
