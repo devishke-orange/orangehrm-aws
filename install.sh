@@ -154,7 +154,7 @@ fi
 
 echo -e "\nPlease run ${YELLOW}source /home/ec2-user/.bashrc${ENDCOLOR} to activate the ${GREEN}orangehrm${ENDCOLOR} command\n"
 
-sh "${REPO_FOLDER}/scripts/orangehrm.sh"
+echo -e "Installation complete!\n"
 
 write_to_log "Installer completed!"
 cleanup
