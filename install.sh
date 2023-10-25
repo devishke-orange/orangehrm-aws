@@ -5,8 +5,6 @@ RED="\e[1;31m"
 GREEN="\e[1;32m"
 YELLOW="\e[1;33m"
 ENDCOLOR="\e[0m"
-YES_REGEX="^y(e|es)?$"
-NO_REGEX="^n(o)?$"
 LOG_FILE=/home/ec2-user/install_log.txt
 BASHRC_FILE=/home/ec2-user/.bashrc
 REPO_FOLDER=/home/ec2-user/.orangehrm
@@ -15,7 +13,6 @@ ORANGEHRM_ALIAS_COMMENT="# This alias is related to the orangehrm command"
 WIP_ICON="🚧"
 SUCCESS_ICON="✅"
 ERROR_ICON="🔴"
-answer=""
 now=$(date)
 
 # Unset all variables and reset color
@@ -25,8 +22,6 @@ cleanup() {
     unset GREEN
     unset YELLOW
     unset ENDCOLOR
-    unset YES_REGEX
-    unset NO_REGEX
     unset LOG_FILE
     unset BASHRC_FILE
     unset REPO_FOLDER
@@ -35,7 +30,6 @@ cleanup() {
     unset WIP_ICON
     unset SUCCESS_ICON
     unset ERROR_ICON
-    unset answer
     unset now
 }
 
@@ -61,16 +55,6 @@ err_exit () {
     write_to_log "Exited with error"
     cleanup
     exit 1
-}
-
-# Check whether the user input matches y/ye/yes or n/no
-yes_no_check() {
-    read -rp "> " answer
-    while ! [[ $answer =~ $YES_REGEX|$NO_REGEX ]]; do
-		echo -e "\n${RED}Invalid input${ENDCOLOR}"
-		echo -e "Please enter ${YELLOW}yes${ENDCOLOR} or ${YELLOW}no${ENDCOLOR}"
-		read -rp "> " answer
-	done
 }
 
 # Catch CTRL-C and run early_exit function
