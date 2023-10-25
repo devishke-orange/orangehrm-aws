@@ -1,6 +1,7 @@
 #!/bin/bash
 
 # Set required variables
+VERSION="v1.0"
 RED="\e[1;31m"
 GREEN="\e[1;32m"
 YELLOW="\e[1;33m"
@@ -18,6 +19,7 @@ now=$(date)
 # Unset all variables and reset color
 cleanup() {
     echo -e "${ENDCOLOR}"
+    unset VERSION
     unset RED
     unset GREEN
     unset YELLOW
@@ -60,9 +62,16 @@ err_exit () {
 # Catch CTRL-C and run early_exit function
 trap early_exit SIGINT
 
-echo -e "\n${GREEN}OrangeHRM Command v1.0 Installer${ENDCOLOR}"
+echo -e "\n${GREEN}OrangeHRM Command ${VERSION} Installer${ENDCOLOR}"
 echo -e "This installer will install the ${GREEN}orangehrm${ENDCOLOR} command."
 echo -e "The command will enable you to manage your AWS instance of OrangeHRM completely via the terminal\n"
+
+# Check if the orangehrm command is already installed
+if [[ -d "${REPO_FOLDER}/.git" ]]; then
+    echo -e "OrangeHRM Command ${VERSION} is already installed!"
+    echo -e "If you are trying to update the command please run ${GREEN}orangehrm update-command${ENDCOLOR}.\n"
+    exit 1;
+fi
 
 echo -e "${YELLOW}Checking permissions${ENDCOLOR}..............${WIP_ICON}"
 # Check if root or sudo
@@ -143,10 +152,10 @@ else
     write_to_log "Login script successfully moved to /etc/profile.d"
 fi
 
-echo -e "\nPlease run ${YELLOW}source /home/ec2-user/.bashrc${ENDCOLOR} to activate the ${GREEN}orangehrm${ENDCOLOR} command"
+echo -e "\nPlease run ${YELLOW}source /home/ec2-user/.bashrc${ENDCOLOR} to activate the ${GREEN}orangehrm${ENDCOLOR} command\n"
 
 sh "${REPO_FOLDER}/scripts/orangehrm.sh"
 
-write_to_log "Installer completed!"
+write_to_log "Installer completed!\n"
 cleanup
 exit 0
