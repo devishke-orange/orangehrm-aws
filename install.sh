@@ -94,7 +94,7 @@ echo -e "${YELLOW}Checking pre-requisites${ENDCOLOR}...........${WIP_ICON}"
 if ! [[ $(command -v git) ]]; then
     tput cuu1
     echo -e "${RED}Checking pre-requisites${ENDCOLOR}...........${ERROR_ICON}"
-    echo -e "{RED}git is not installed!${ENDCOLOR}"
+    echo -e "${RED}git is not installed!${ENDCOLOR}"
     echo "Please install git and try running the script again"
     write_to_log "git not installed"
     err_exit
