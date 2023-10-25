@@ -73,22 +73,6 @@ if [[ -d "${REPO_FOLDER}/.git" ]]; then
     exit 1;
 fi
 
-echo -e "${YELLOW}Checking permissions${ENDCOLOR}..............${WIP_ICON}"
-# Check if root or sudo
-if ! [[ $(id -u) = 0 ]]; then
-    tput cuu1
-    echo -e "${RED}Checking permissions${ENDCOLOR}..............${ERROR_ICON}"
-    # No logging since permissions may be insufficient
-    echo -e "The script must be run as root or with sudo!"
-    cleanup
-    exit 1;
-else
-    write_to_log "Installer started"
-    write_to_log "Script run as root"
-    tput cuu1
-    echo -e "${GREEN}Checking permissions${ENDCOLOR}..............${SUCCESS_ICON}"
-fi
-
 echo -e "${YELLOW}Checking pre-requisites${ENDCOLOR}...........${WIP_ICON}"
 # Check if git is installed
 if ! [[ $(command -v git) ]]; then
@@ -135,21 +119,6 @@ else
     tput cuu1
     echo -e "${GREEN}Writing alias to .bashrc${ENDCOLOR}..........${SUCCESS_ICON}"
     write_to_log "Alias written to .bashrc"
-fi
-
-# Copy the login-script to /etc/profile.d/
-echo -e "${YELLOW}Creating login script${ENDCOLOR}.............${WIP_ICON}"
-if [[ -f "/etc/profile.d/login_orangehrm.sh" ]]; then
-    tput cuu1
-    echo -e "${RED}Creating login script${ENDCOLOR}.............${ERROR_ICON}"
-    echo "The login script already exists! Please check /etc/profile.d"
-    write_to_log "Login script already exists in /etc/profile.d"
-    err_exit
-else
-    cp "${REPO_FOLDER}/scripts/login_orangehrm.sh" /etc/profile.d/login_orangehrm.sh 2>>$LOG_FILE
-    tput cuu1
-    echo -e "${GREEN}Creating login script${ENDCOLOR}.............${SUCCESS_ICON}"
-    write_to_log "Login script successfully moved to /etc/profile.d"
 fi
 
 echo -e "\nPlease run ${YELLOW}source /home/ec2-user/.bashrc${ENDCOLOR} to activate the ${GREEN}orangehrm${ENDCOLOR} command\n"
