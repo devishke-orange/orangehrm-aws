@@ -60,15 +60,9 @@ err_exit () {
 # Catch CTRL-C and run early_exit function
 trap early_exit SIGINT
 
-echo -e "\n#################################################################"
-echo "#								#"
-echo -e "#	    		${GREEN}OrangeHRM Command${ENDCOLOR}			#"
-echo "# 								#"
-echo -e "#   This script will install the ${GREEN}orangehrm${ENDCOLOR} command.		#"
-echo "#   The command will enable you to install, upgrade, backup,    #"
-echo "#   restore OrangeHRM completely via the terminal.		#"
-echo "#								#"
-echo -e "#################################################################\n"
+echo -e "\n${GREEN}OrangeHRM Command v1.0 Installer${ENDCOLOR}"
+echo -e "This installer will install the ${GREEN}orangehrm${ENDCOLOR} command."
+echo -e "The command will enable you to manage your AWS instance of OrangeHRM completely via the terminal\n"
 
 echo -e "${YELLOW}Checking permissions${ENDCOLOR}..............${WIP_ICON}"
 # Check if root or sudo
@@ -82,6 +76,7 @@ if ! [[ $(id -u) = 0 ]]; then
 else
     write_to_log "Installer started"
     write_to_log "Script run as root"
+    tput cuu1
     echo -e "${GREEN}Checking permissions${ENDCOLOR}..............${SUCCESS_ICON}"
 fi
 
@@ -150,7 +145,7 @@ fi
 
 echo -e "\nPlease run ${YELLOW}source /home/ec2-user/.bashrc${ENDCOLOR} to activate the ${GREEN}orangehrm${ENDCOLOR} command"
 
-sh "${REPO_FOLDER}/scripts/status.sh"
+sh "${REPO_FOLDER}/scripts/orangehrm.sh"
 
 write_to_log "Installer completed!"
 cleanup
