@@ -12,6 +12,7 @@ cleanup() {
     unset ENDCOLOR
 }
 
+# TO-DO install check
 if [[ -z "/home/ec2-user/orangehrm-aws/installed" ]]
 then
     # TO-DO add version
