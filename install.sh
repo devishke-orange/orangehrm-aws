@@ -126,5 +126,9 @@ echo -e "\nPlease run ${YELLOW}source /home/ec2-user/.bashrc${ENDCOLOR} to activ
 echo -e "Installation complete!\n"
 
 write_to_log "Installer completed!"
+
+mkdir "${REPO_FOLDER}/logs"
+mv $LOG_FILE "${REPO_FOLDER}/logs"
+
 cleanup
 exit 0
