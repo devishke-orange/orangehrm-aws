@@ -30,6 +30,8 @@ elif [[ $1 = "status" ]]; then
     ohrm_script status.sh
 elif [[ $1 = "create-login-message" ]]; then
     ohrm_script create_login_message.sh
+elif [[ $1 = "check-update" ]]; then
+    ohrm_script check_update.sh
 elif [[ $1 = "help" ]]; then
     help
 else
