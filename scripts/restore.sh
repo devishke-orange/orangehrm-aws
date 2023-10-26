@@ -21,9 +21,9 @@ if ! [[ -f $INSTALL_FILE ]]; then
 fi
 
 echo "Please select a backup to restore from"
-echo "The backups are named in a 'Year-Month-Date-Hour-Minute-Second' format"
+echo "The backups are named in a 'Year_Month_Date_Hour_Minute_Second' format"
 echo -e "Select a backup by typing the corresponding number\n"
-backups=("$(ls $BACKUP_DIR | sed 's/_/-/g')")
+backups=("${BACKUP_DIR}"/*)
 select backup in "${backups[@]}" "quit"
 do
     if [[ $backup =~ "quit" ]]; then
