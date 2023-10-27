@@ -332,11 +332,11 @@ get_config_values() {
 }
 
 create_containers() {
-	echo -e "${YELLOW}Creating the containers${ENDCOLOR}...........${WIP_ICON}"
+	echo -e "\n${YELLOW}Creating the containers${ENDCOLOR}...........${WIP_ICON}"
 	docker compose -f /home/ec2-user/.orangehrm/compose.yml up -d --remove-orphans &> /dev/null
 	tput cuu1
-	echo -e "${GREEN}Creating the containers${ENDCOLOR}...........${SUCCESS_ICON}"
 	sleep 5
+	echo -e "${GREEN}Creating the containers${ENDCOLOR}...........${SUCCESS_ICON}"
 }
 
 update_configuration() {
