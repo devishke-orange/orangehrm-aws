@@ -39,7 +39,7 @@ if ! [[ -f $INSTALL_FILE ]]; then
 fi
 
 git -C $OHRM_DIR fetch --quiet
-newVersion=$(git -C $OHRM_DIR diff main origin/main)
+newVersion=$(git -C .orangehrm/ diff main origin/main | grep "+    image: orangehrm/orangehrm")
 
 if [[ -z $newVersion ]]; then
     echo -e "${GREEN}OrangeHRM is up to date!${ENDCOLOR}"
