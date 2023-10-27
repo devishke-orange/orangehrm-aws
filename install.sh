@@ -62,73 +62,85 @@ err_exit () {
 # Catch CTRL-C and run early_exit function
 trap early_exit SIGINT
 
-echo -e "\n${GREEN}OrangeHRM Command ${VERSION} Installer${ENDCOLOR}"
-echo -e "This installer will install the ${GREEN}orangehrm${ENDCOLOR} command."
-echo -e "The command will enable you to manage your AWS instance of OrangeHRM completely via the terminal\n"
+show_start_message() {
+    echo -e "\n${GREEN}OrangeHRM Command ${VERSION} Installer${ENDCOLOR}"
+    echo -e "This installer will install the ${GREEN}orangehrm${ENDCOLOR} command."
+    echo -e "The command will enable you to manage your AWS instance of OrangeHRM completely via the terminal\n"
+}
 
-# Check if the orangehrm command is already installed
-if [[ -d "${REPO_FOLDER}/.git" ]]; then
-    echo -e "OrangeHRM Command ${VERSION} is already installed!"
-    echo -e "If you are trying to update the command please run ${GREEN}orangehrm update-command${ENDCOLOR}.\n"
-    exit 1;
-fi
+check_already_installed() {
+    # Check if the orangehrm command is already installed
+    if [[ -d "${REPO_FOLDER}/.git" ]]; then
+        echo -e "OrangeHRM Command ${VERSION} is already installed!"
+        echo -e "If you are trying to update the command please run ${GREEN}orangehrm update-command${ENDCOLOR}.\n"
+        exit 1;
+    fi
 
-echo -e "${YELLOW}Checking pre-requisites${ENDCOLOR}...........${WIP_ICON}"
-# Check if git is installed
-if ! [[ $(command -v git) ]]; then
-    tput cuu1
-    echo -e "${RED}Checking pre-requisites${ENDCOLOR}...........${ERROR_ICON}"
-    echo "git is not installed!"
-    echo "Please install git and try running the script again"
-    write_to_log "git not installed"
-    err_exit
-else
-    tput cuu1
-    echo -e "${GREEN}Checking pre-requisites${ENDCOLOR}...........${SUCCESS_ICON}"
-    write_to_log "Pre-requisite check success"
-fi
+    echo -e "${YELLOW}Checking pre-requisites${ENDCOLOR}...........${WIP_ICON}"
+}
 
-# Clone the repository
-echo -e "${YELLOW}Cloning the repository${ENDCOLOR}............${WIP_ICON}"
-if [[ -d $REPO_FOLDER ]]; then
-    tput cuu1
-    echo -e "${RED}Cloning the repository${ENDCOLOR}............${ERROR_ICON}"
-    # TO-DO
-    echo -e "The repository already exists. If you are trying to update the command please run ${GREEN}orangehrm update-command${ENDCOLOR}."
-    write_to_log "Repo already exists"
-    err_exit
-else
-    git clone --progress https://github.com/devishke-orange/orangehrm-aws $REPO_FOLDER &>/dev/null
+check_prereq() {
+    # Check if git is installed
+    if ! [[ $(command -v git) ]]; then
+        tput cuu1
+        echo -e "${RED}Checking pre-requisites${ENDCOLOR}...........${ERROR_ICON}"
+        echo "git is not installed!"
+        echo "Please install git and try running the script again"
+        write_to_log "git not installed"
+        err_exit
+    else
+        tput cuu1
+        echo -e "${GREEN}Checking pre-requisites${ENDCOLOR}...........${SUCCESS_ICON}"
+        write_to_log "Pre-requisite check success"
+    fi
+}
+
+clone_repo() {
+    # Clone the repository
+    echo -e "${YELLOW}Cloning the repository${ENDCOLOR}............${WIP_ICON}"
+    git clone https://github.com/devishke-orange/orangehrm-aws $REPO_FOLDER &>/dev/null
     tput cuu1
     echo -e "${GREEN}Cloning the repository${ENDCOLOR}............${SUCCESS_ICON}"
     write_to_log "Repo successfully cloned"
-fi
+}
 
-# Write the alias to .bashrc
-echo -e "${YELLOW}Writing alias to .bashrc${ENDCOLOR}..........${WIP_ICON}"
-if [[ $(grep "${ORANGEHRM_ALIAS}" < $BASHRC_FILE) ]]; then
-    tput cuu1
-    echo -e "${RED}Writing alias to .bashrc${ENDCOLOR}..........${ERROR_ICON}"
-    echo "The alias is already written! Please remove any references to orangehrm from /home/ec2-user/.bashrc and restart the installer"
-    write_to_log "Alias already written"
-    grep orangehrm < $BASHRC_FILE >> $LOG_FILE
-    err_exit
-else
-    echo -e "\n\n${ORANGEHRM_ALIAS_COMMENT}" >> $BASHRC_FILE
-    echo -e "${ORANGEHRM_ALIAS}" >> $BASHRC_FILE
-    tput cuu1
-    echo -e "${GREEN}Writing alias to .bashrc${ENDCOLOR}..........${SUCCESS_ICON}"
-    write_to_log "Alias written to .bashrc"
-fi
+write_bashrc() {
+    # Write the alias to .bashrc
+    echo -e "${YELLOW}Writing alias to .bashrc${ENDCOLOR}..........${WIP_ICON}"
+    if grep -q "${ORANGEHRM_ALIAS}" < $BASHRC_FILE ; then
+        tput cuu1
+        echo -e "${RED}Writing alias to .bashrc${ENDCOLOR}..........${ERROR_ICON}"
+        echo "The alias is already written! Please remove any references to orangehrm from /home/ec2-user/.bashrc and restart the installer"
+        write_to_log "Alias already written"
+        grep orangehrm < $BASHRC_FILE >> $LOG_FILE
+        err_exit
+    else
+        echo -e "\n\n${ORANGEHRM_ALIAS_COMMENT}" >> $BASHRC_FILE
+        echo -e "${ORANGEHRM_ALIAS}" >> $BASHRC_FILE
+        tput cuu1
+        echo -e "${GREEN}Writing alias to .bashrc${ENDCOLOR}..........${SUCCESS_ICON}"
+        write_to_log "Alias written to .bashrc"
+    fi
+}
 
-echo -e "\nPlease run ${YELLOW}source /home/ec2-user/.bashrc${ENDCOLOR} to activate the ${GREEN}orangehrm${ENDCOLOR} command\n"
+show_complete_message() {
+    echo -e "\nPlease run ${YELLOW}source /home/ec2-user/.bashrc${ENDCOLOR} to activate the ${GREEN}orangehrm${ENDCOLOR} command\n"
+    echo -e "Installation complete!\n"
+    write_to_log "Installer completed!"
+}
 
-echo -e "Installation complete!\n"
+move_log()  {
+    mkdir "${REPO_FOLDER}/logs"
+    mv $LOG_FILE "${REPO_FOLDER}/logs"
+}
 
-write_to_log "Installer completed!"
-
-mkdir "${REPO_FOLDER}/logs"
-mv $LOG_FILE "${REPO_FOLDER}/logs"
+show_start_message
+check_already_installed
+check_prereq
+clone_repo
+write_bashrc
+show_complete_message
+move_log
 
 cleanup
 exit 0
