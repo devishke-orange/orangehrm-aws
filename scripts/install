@@ -1,7 +1,18 @@
 #!/bin/bash
 
-FILE=/home/ec2-user/.orangehrm/installed
+set -e
 
+if [[ -z  $OHRM_DIR ]]; then
+    echo -e "\nPlease run the script from the OrangeHRM command\n"
+    exit 1;
+fi
+
+if [[ -f "${OHRM_DIR}/.installed" ]]; then
+	echo -e "${GREEN}OrangeHRM is already installed!${ENDCOLOR}"
+	exit 0
+fi
+
+# Setting required variables
 firstName=""
 lastName=""
 email=""
@@ -11,42 +22,6 @@ password2=""
 orgName=""
 answer="no"
 encryptOption=""
-token=""
-ohrmIP=""
-FIELDS=("First Name" "Last Name" "Work Email" "Org Name" "Country" "Username" "Password" "Data Encryption")
-RED="\e[1;31m"
-GREEN="\e[1;32m"
-YELLOW="\e[1;33m"
-ENDCOLOR="\e[0m"
-WIP_ICON="🚧"
-SUCCESS_ICON="✅"
-ERROR_ICON="🔴"
-YES_REGEX="^y(e|es)?$"
-NO_REGEX="^n(o)?$"
-
-cleanup () {
-	unset firstName
-	unset lastName
-	unset email
-	unset username
-	unset password
-	unset password2
-	unset orgName
-	unset answer
-	unset encryptOption
-	unset token
-	unset ohrmIP
-	unset FIELDS
-	unset RED
-	unset GREEN
-	unset YELLOW
-	unset ENDCOLOR
-	unset WIP_ICON
-	unset SUCCESS_ICON
-	unset ERROR_ICON
-	unset YES_REGEX
-	unset NO_REGEX
-}
 
 check_prereq () {
 	echo -e "${YELLOW}Checking pre-requisites${ENDCOLOR}...........${WIP_ICON}"
@@ -79,10 +54,25 @@ check_prereq () {
 	fi
 
 	tput cuu1
-	echo -e "${GREEN}Checking pre-requisites${ENDCOLOR}...........${SUCCESS_ICON}\n"
+	echo -e "${GREEN}Checking pre-requisites${ENDCOLOR}...........${SUCCESS_ICON}"
+}
+
+create_containers() {
+	echo -e "${YELLOW}Creating the containers${ENDCOLOR}...........${WIP_ICON}"
+	# Reset compose.yml
+	# git -C "${OHRM_DIR}" checkout HEAD -- compose.yml
+	docker compose --file /home/ec2-user/.orangehrm/compose.yml up --detach --remove-orphans &> /dev/null
+	sleep 2
+	docker cp "${ASSET_DIR}/MAINTENANCE" orangehrm:/var/www/html --quiet
+	docker exec orangehrm mv index.php BACKUP
+	docker exec orangehrm mv MAINTENANCE index.php
+	tput cuu1
+	echo -e "${GREEN}Creating the containers${ENDCOLOR}...........${SUCCESS_ICON}\n"
 }
 
 early_exit () {
+	local containersActive
+
 	echo -e "\n${RED}Quitting the installation..${ENDCOLOR}"
 	echo -e "${YELLOW}Cleaning install files${ENDCOLOR}............${WIP_ICON}"
 
@@ -90,22 +80,22 @@ early_exit () {
 	containersActive=false
 
 	# Check if OrangeHRM container is running
-	if [[ $(docker inspect -f '{{.State.Running}}' ohrm 2>/dev/null) = "true" ]]
+	if [[ $(docker inspect -f '{{.State.Running}}' orangehrm 2>/dev/null) = "true" ]]
 	then
 		# Silently stop and remove the OrangeHRM container
-		docker stop ohrm &>/dev/null
-		docker rm ohrm &>/dev/null
+		docker stop orangehrm &>/dev/null
+		docker rm orangehrm &>/dev/null
 		containersActive=true
 	fi
 
 	# Check if MariaDB container is running
-	if [[ $(docker inspect -f '{{.State.Running}}' ohrm-db 2>/dev/null) = "true" ]]
+	if [[ $(docker inspect -f '{{.State.Running}}' mariadb 2>/dev/null) = "true" ]]
 	then
 		# Silently drop the orangehrm database
-		docker exec ohrm-db mariadb -proot -e "drop database if exists orangehrm" &> /dev/null
+		docker exec mariadb mariadb -proot -e "drop database if exists orangehrm" &> /dev/null
 		# Silently stop and remove the MariaDB container
-		docker stop ohrm-db &>/dev/null
-		docker rm ohrm-db &>/dev/null
+		docker stop mariadb &>/dev/null
+		docker rm mariadb &>/dev/null
 		containersActive=true
 	fi
 	
@@ -124,8 +114,8 @@ early_exit () {
 	
 	tput cuu1
 	echo -e "${GREEN}Cleaning install files${ENDCOLOR}............${SUCCESS_ICON}"
-	echo -e "You can run \"${GREEN}orangehrm install${ENDCOLOR}\" to restart the installation${ENDCOLOR}"
-	cleanup
+	echo -e "You can run \"${GREEN}orangehrm install${ENDCOLOR}\" to restart the installation${ENDCOLOR}\n"
+
 	exit 0
 }
 
@@ -141,7 +131,7 @@ reset_answer() {
 }
 
 show_start_message() {
-	cat /home/ec2-user/.orangehrm/assets/LOGO
+	cat "${ASSET_DIR}/LOGO"
 	echo -e "\n${GREEN}Starting the OrangeHRM Installation${ENDCOLOR}\n"
 }
 
@@ -282,6 +272,9 @@ show_config() {
 }
 
 get_config_values() {
+	local fields
+	fields=("First Name" "Last Name" "Work Email" "Org Name" "Country" "Username" "Password" "Data Encryption")
+
 	get_first_name
 	get_last_name
 	get_email
@@ -298,7 +291,7 @@ get_config_values() {
 	yes_no_check
 	if [[ $answer =~ $NO_REGEX ]]; then
 		echo -e "\nPlease choose a field to edit (or select quit)"
-		select field in "${FIELDS[@]}" "quit"; do
+		select field in "${fields[@]}" "quit"; do
 			if [[ $field = "quit" ]]; then
 				break;
 			elif [[ $field = "First Name" ]]; then
@@ -331,46 +324,44 @@ get_config_values() {
 	fi
 }
 
-create_containers() {
-	echo -e "\n${YELLOW}Creating the containers${ENDCOLOR}...........${WIP_ICON}"
-	docker compose -f /home/ec2-user/.orangehrm/compose.yml up -d --remove-orphans &> /dev/null
-	tput cuu1
-	sleep 5
-	echo -e "${GREEN}Creating the containers${ENDCOLOR}...........${SUCCESS_ICON}"
-}
-
 update_configuration() {
-	echo -e "${YELLOW}Updating install configuration${ENDCOLOR}....${WIP_ICON}"
-	docker exec ohrm sed -i 's/hostName: 127.0.0.1/hostName: mariadb1011/' installer/cli_install_config.yaml
-	docker exec ohrm sed -i 's/databaseName: orangehrm_mysql/databaseName: orangehrm/' installer/cli_install_config.yaml
-	docker exec ohrm sed -i "s/adminEmployeeFirstName: OrangeHRM/adminEmployeeFirstName: $firstName/" installer/cli_install_config.yaml
-	docker exec ohrm sed -i "s/adminEmployeeLastName: Admin/adminEmployeeLastName: $lastName/" installer/cli_install_config.yaml
-	docker exec ohrm sed -i "s/adminUserName: Admin/adminUserName: $username/" installer/cli_install_config.yaml
-	docker exec ohrm sed -i "s/adminPassword: Ohrm@1423/adminPassword: $password/" installer/cli_install_config.yaml
-	docker exec ohrm sed -i "s/workEmail: admin@example.com/workEmail: $email/" installer/cli_install_config.yaml
-	docker exec ohrm sed -i "s/ name: OrangeHRM/ name: $orgName/" installer/cli_install_config.yaml
-	docker exec ohrm sed -i "s/country: US/country: $country/" installer/cli_install_config.yaml
-	docker exec ohrm sed -i "s/enableDataEncryption: n/enableDataEncryption: $encryptOption/" installer/cli_install_config.yaml
-	docker exec ohrm sed -i "s/registrationConsent: true/registrationConsent: false/" installer/cli_install_config.yaml
+	echo -e "\n${YELLOW}Updating install configuration${ENDCOLOR}....${WIP_ICON}"
+	docker exec orangehrm sed -i 's/hostName: 127.0.0.1/hostName: mariadb1011/' installer/cli_install_config.yaml
+	docker exec orangehrm sed -i 's/databaseName: orangehrm_mysql/databaseName: orangehrm/' installer/cli_install_config.yaml
+	docker exec orangehrm sed -i "s/adminEmployeeFirstName: OrangeHRM/adminEmployeeFirstName: $firstName/" installer/cli_install_config.yaml
+	docker exec orangehrm sed -i "s/adminEmployeeLastName: Admin/adminEmployeeLastName: $lastName/" installer/cli_install_config.yaml
+	docker exec orangehrm sed -i "s/adminUserName: Admin/adminUserName: $username/" installer/cli_install_config.yaml
+	docker exec orangehrm sed -i "s/adminPassword: Ohrm@1423/adminPassword: $password/" installer/cli_install_config.yaml
+	docker exec orangehrm sed -i "s/workEmail: admin@example.com/workEmail: $email/" installer/cli_install_config.yaml
+	docker exec orangehrm sed -i "s/ name: OrangeHRM/ name: $orgName/" installer/cli_install_config.yaml
+	docker exec orangehrm sed -i "s/country: US/country: $country/" installer/cli_install_config.yaml
+	docker exec orangehrm sed -i "s/enableDataEncryption: n/enableDataEncryption: $encryptOption/" installer/cli_install_config.yaml
+	docker exec orangehrm sed -i "s/registrationConsent: true/registrationConsent: false/" installer/cli_install_config.yaml
+	
 	tput cuu1
 	echo -e "${GREEN}Updating install configuration${ENDCOLOR}....${SUCCESS_ICON}"
 }
 
 install_orangehrm() {
 	echo -e "${YELLOW}Installing OrangeHRM${ENDCOLOR}..............${WIP_ICON}"
-	docker exec ohrm php installer/cli_install.php &> /dev/null
+	docker exec orangehrm php installer/cli_install.php &>/dev/null
+
+	docker exec orangehrm rm -f index.php
+	docker exec orangehrm mv BACKUP index.php
+
 	tput cuu1
 	echo -e "${GREEN}Installing OrangeHRM${ENDCOLOR}..............${SUCCESS_ICON}"
 }
 
 write_install_file() {
-	printf "DO NOT DELETE THIS FILE!
-This file let's the instance know that OrangeHRM is installed!
-If you delete this file, the instance will run an install script the next time you SSH into this instance." > $FILE
+	printf "DO NOT DELETE THIS FILE! This file let's the instance know that OrangeHRM is installed!" > "${OHRM_DIR}/.installed"
 	echo -e "\n${GREEN}OrangeHRM is finished installing!${ENDCOLOR}"
 }
 
 print_aws_ip() {
+	local token
+	local ohrmIP
+
 	token=$(curl -s -X PUT "http://169.254.169.254/latest/api/token" -H "X-aws-ec2-metadata-token-ttl-seconds: 21600")
 	ohrmIP=$(curl -s -H "X-aws-ec2-metadata-token: ${token}" http://169.254.169.254/latest/meta-data/public-ipv4)
 	echo -e "\nVisit ${GREEN}http://${ohrmIP}${ENDCOLOR} to access your OrangeHRM system!"
@@ -379,20 +370,14 @@ print_aws_ip() {
 # Catch CTRL-C
 trap early_exit SIGINT
 
-if [[ -f "$FILE" ]]; then
-	echo -e "${GREEN}OrangeHRM is installed!${ENDCOLOR}"
-	exit 0
-fi
-
 show_start_message
 check_prereq
+create_containers
 get_license_agreement
 get_config_values
-create_containers
 update_configuration
 install_orangehrm
 write_install_file
 print_aws_ip
 
-cleanup
 exit 0
