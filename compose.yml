@@ -1,6 +1,6 @@
 services:
   orangehrm:
-    image: orangehrm/orangehrm:5.3
+    image: orangehrm/orangehrm:5.5
     restart: always
     ports:
       - "80:80"
