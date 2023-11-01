@@ -1,0 +1,33 @@
+#!/bin/bash
+
+answer="no"
+
+echo -e "\nThis command will completely wipe all OrangeHRM containers and data!"
+echo -e "Are you sure you want to continue? ${YELLOW}[yes/no]${ENDCOLOR}"
+
+read -rp "> " answer
+
+while ! [[ $answer =~ $YES_REGEX|$NO_REGEX ]]; do
+    echo "Please enter yes or no"
+    read -rp "> " answer
+done
+
+if [[ answer =~ $NO_REGEX ]]; then
+    echo -e "Quitting..\n"
+    exit 0
+fi
+
+echo -e "\n${YELLOW}Wiping OrangeHRM data${ENDCOLOR}.............${WIP_ICON}"
+
+if [[ $(docker inspect -f '{{.State.Running}}' mariadb 2>/dev/null) = "true" ]]; then
+    docker exec mariadb mariadb -proot -e "drop database if exists orangehrm"
+fi
+docker compose --file "${OHRM_DIR}/compose.yml" down &>/dev/null
+docker system prune --all --force &>/dev/null
+rm --force "${OHRM_DIR}/.installed"
+rm --recursive --force "${OHRM_DIR}/backups/*"
+
+tput cuu1
+echo -e "${GREEN}Wiping OrangeHRM data${ENDCOLOR}.............${SUCCESS_ICON}\n"
+
+exit 0
