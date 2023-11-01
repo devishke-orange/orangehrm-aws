@@ -1,0 +1,100 @@
+#!/bin/bash
+
+export OHRM_DIR=/home/ec2-user/.orangehrm
+export SCRIPT_DIR="${OHRM_DIR}/scripts"
+export ASSET_DIR="${OHRM_DIR}/assets"
+
+export RED="\e[1;31m"
+export GREEN="\e[1;32m"
+export YELLOW="\e[1;33m"
+export ENDCOLOR="\e[0m"
+export WIP_ICON="🚧"
+export SUCCESS_ICON="✅"
+export ERROR_ICON="🔴"
+
+export YES_REGEX="^y(e|es)?$"
+export NO_REGEX="^n(o)?$"
+
+help() {
+    cat "${ASSET_DIR}/HELP"
+}
+
+check_installed() {
+    if ! [[ -f "${OHRM_DIR}/.installed" ]]; then
+        ohrm_script status
+        exit 1
+    fi
+}
+
+# Function to run scripts.
+# Give the name of the script as the first argument
+# Give "check" as the second argument if the install status needs to be checked
+ohrm_script() {
+    if [[ $2 = "check" ]]; then
+        check_installed
+    fi
+    sh "${SCRIPT_DIR}/${1}"
+}
+
+cleanup() {
+    unset OHRM_DIR
+    unset SCRIPT_DIR
+    unset ASSET_DIR
+    unset RED
+    unset GREEN
+    unset YELLOW
+    unset ENDCOLOR
+    unset WIP_ICON
+    unset SUCCESS_ICON
+    unset ERROR_ICON
+    unset YES_REGEX
+    unset NO_REGEX
+}
+
+# shellcheck disable=SC2317
+err_exit() {
+    cleanup
+    exit 1
+}
+
+trap err_exit ERR
+
+if [[ $# -eq 0 ]]; then
+    # If no arguments
+    help
+else
+    case $1 in
+        install)
+            ohrm_script install
+            ohrm_script backup
+            echo -e "NOTE: An initial backup of your system has been created\n"
+            ;;
+        upgrade)
+            ohrm_script upgrade check
+            ;;
+        backup)
+            ohrm_script backup check
+            ;;
+        restore)
+            ohrm_script restore check
+            ;;
+        clean)
+            ohrm_script clean
+            ;;
+        status)
+            ohrm_script status
+            ;;
+        check-update)
+            ohrm_script check-update check
+            ;;
+        help)
+            help
+            ;;
+        *)
+            echo -e "\n${RED}${1}${ENDCOLOR} is not an orangehrm command"
+            echo -e "See '${GREEN}orangehrm help${ENDCOLOR}'\n" 
+    esac
+fi
+
+cleanup
+exit 0;
