@@ -1,0 +1,49 @@
+#!/bin/bash
+
+set -e
+
+echo -e "\nRestore your OrangeHRM AWS Instance to a previous state\n"
+
+answer=no
+
+echo -e "${RED}WARNING${ENDCOLOR}: This will erase all data that has been added after the relevant backup\n"
+echo -e "Are you sure you want to continue? ${YELLOW}[yes/no]${ENDCOLOR}"
+read -rp "> " answer
+
+while ! [[ $answer =~ $YES_REGEX|$NO_REGEX ]]; do
+    echo "Please enter yes or no"
+    read -rp "> " answer
+done
+
+if [[ answer =~ $NO_REGEX ]]; then
+    echo -e "Quitting..\n"
+    exit 0
+fi
+
+echo "Please select a backup to restore from"
+echo "The backups are named in a 'Year_Month_Date_Hour_Minute_Second' format"
+echo -e "Select a backup by typing the corresponding number\n"
+backups=("${OHRM_DIR}/backups"/*)
+select backup in "${backups[@]}" "quit"
+do
+    if [[ $backup =~ "quit" ]]; then
+        break;
+    fi
+
+    echo -e "\n${YELLOW}Restoring Backup${ENDCOLOR}..................${WIP_ICON}"
+
+    docker compose --file "${OHRM_DIR}/compose.yml" down &>/dev/null
+    cp "${backup}/compose.yml" "${OHRM_DIR}/compose.yml"
+    docker compose --file "${OHRM_DIR}/compose.yml" up --detach --remove-orphans &>/dev/null
+    sleep 2
+    docker cp "${backup}/Conf.php" orangehrm:/var/www/html/lib/confs/Conf.php --quiet
+    docker cp "${backup}/key.ohrm" orangehrm:/var/www/html/lib/confs/cryptokeys/key.ohrm --quiet
+    docker exec -i mariadb sh -c 'exec mariadb -uroot -proot' < "${backup}/mariadb.sql"
+    break;
+done
+
+tput cuu1
+echo -e "${GREEN}Restoring Backup${ENDCOLOR}..................${SUCCESS_ICON}"
+echo -e "OrangeHRM backup successfully restored!\n"
+
+exit 0
