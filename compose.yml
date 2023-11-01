@@ -6,7 +6,7 @@ services:
       - "80:80"
     networks:
       - orangehrm
-    container_name: ohrm
+    container_name: orangehrm
 
   mariadb1011:
     image: mariadb:10.11.4
@@ -19,7 +19,7 @@ services:
       - orangehrm-data:/var/lib/mysql
     networks:
       - orangehrm
-    container_name: ohrm-db
+    container_name: mariadb
 
 networks:
   orangehrm:
