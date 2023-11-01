@@ -1,0 +1,18 @@
+#!/bin/bash
+
+if [[ -z  $OHRM_DIR ]]; then
+    printf "\nPlease run the script from the OrangeHRM command\n\n"
+    exit 1;
+fi
+
+currentVersion=$(grep "    image: orangehrm/orangehrm:" "${OHRM_DIR}/compose.yml" | sed 's/    image: orangehrm\/orangehrm://')
+newVersion=$(curl --silent https://raw.githubusercontent.com/devishke-orange/orangehrm-aws/main/compose.yml | grep "    image: orangehrm/orangehrm:" | sed 's/    image: orangehrm\/orangehrm://')
+
+if [[ "${currentVersion}" = "${newVersion}" ]]; then
+    printf "\nOrangeHRM is up to date!\n\n"
+else
+    printf "\nA new version of OrangeHRM is available!\n"
+    echo -e "Please run '${GREEN}orangehrm upgrade${ENDCOLOR}' to upgrade!\n"
+fi
+
+exit 0;
