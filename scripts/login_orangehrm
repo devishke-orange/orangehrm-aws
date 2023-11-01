@@ -1,0 +1,17 @@
+#!/bin/bash
+
+# The login message script. Move to /etc/profile.d
+
+alias orangehrm='sh /home/ec2-user/.orangehrm/orangehrm'
+
+supress_message() {
+    printf "To supress this message remove login_orangehrm.sh from /etc/profile.d\n\n"
+}
+
+if ! [[ -f /home/ec2-user/.orangehrm/scripts/status ]]; then
+    printf "The status script has been removed!\n"
+    supress_message
+fi
+
+orangehrm status
+supress_message
