@@ -1,0 +1,15 @@
+#!/bin/bash
+
+if [[ -z  $OHRM_DIR ]]; then
+    printf "\nPlease run the script from the OrangeHRM command\n\n"
+    exit 1;
+fi
+
+if [[ -f "${OHRM_DIR}/.installed" ]]
+then
+    # TO-DO add version
+    echo -e "\n${GREEN}OrangeHRM is installed!${ENDCOLOR}\n"
+else
+    echo -e "\n${YELLOW}OrangeHRM is not installed!${ENDCOLOR}"
+    echo -e "Run '${GREEN}orangehrm install${ENDCOLOR}' to start the installation\n"
+fi
