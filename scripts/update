@@ -1,0 +1,113 @@
+#!/bin/bash
+
+set -e
+
+answer=""
+upgradeDir="${OHRM_DIR}/.upgrade/$(echo $RANDOM | md5sum | head -c 10)"
+KEY_PATH="/var/www/html/lib/confs/cryptokeys/key.ohrm"
+
+if [[ -z  $OHRM_DIR ]]; then
+    printf "\nPlease run the script from the OrangeHRM command\n\n"
+    exit 1;
+fi
+
+yes_no_check() {
+	while ! [[ $answer =~ $YES_REGEX|$NO_REGEX ]]; do
+		echo "Please enter yes or no"
+		read -rp "> " answer
+	done
+}
+
+check_version() {
+    # shellcheck disable=SC1091
+    source "${OHRM_DIR}/.installed"
+    local newVersion
+
+    newVersion=$(curl --silent https://raw.githubusercontent.com/devishke-orange/orangehrm-aws/main/compose.yml | grep "    image: orangehrm/orangehrm:" | sed 's/    image: orangehrm\/orangehrm://')
+
+    if [[ "${OHRM_VERSION}" = "${newVersion}" ]]; then
+        echo -e "\n${GREEN}OrangeHRM is up to date!${ENDCOLOR}\n"
+        exit 0;
+    fi
+
+    echo -e "\n${YELLOW}A new version of OrangeHRM is available${ENDCOLOR}"
+}
+
+upgrader_confirm()  {
+    echo -e "Are you sure you want to upgrade? ${YELLOW}[yes/no]${ENDCOLOR}"
+    read -rp "> " answer
+    yes_no_check
+    if [[ $answer =~ $NO_REGEX ]]; then
+        echo -e "Quitting upgrader..\n"
+        exit 0
+    fi
+}
+
+create_backup() {
+    sh "${SCRIPT_DIR}/backup"
+}
+
+copy_encryption_key() {
+    if docker exec orangehrm find "${KEY_PATH}" &>/dev/null; then
+        mkdir -p "${upgradeDir}"
+        docker cp orangehrm:"${KEY_PATH}" "${upgradeDir}" --quiet
+    fi
+}
+
+stop_existing_ohrm() {
+    echo -e "${YELLOW}Stopping OHRM container${ENDCOLOR}...........${WIP_ICON}"
+
+    docker stop orangehrm &>/dev/null
+    docker rm orangehrm &>/dev/null
+    docker system prune --all --force &>/dev/null
+    tput cuu1
+    echo -e "${GREEN}Stopping OHRM container${ENDCOLOR}............${SUCCESS_ICON}"
+}
+
+create_new_container() {
+    echo -e "${YELLOW}Downloading new compose file${ENDCOLOR}......${WIP_ICON}"
+    curl --silent https://raw.githubusercontent.com/devishke-orange/orangehrm-aws/main/compose.yml > "${OHRM_DIR}/compose.yml"
+    tput cuu1
+    echo -e "${GREEN}Downloading new compose file${ENDCOLOR}.......${SUCCESS_ICON}"
+
+    echo -e "${YELLOW}Upping the container${ENDCOLOR}..............${WIP_ICON}"
+    docker compose -f "${OHRM_DIR}/compose.yml" up -d --remove-orphans &>/dev/null
+    
+    sleep 2
+
+    docker cp "${ASSET_DIR}/maintenance.php" orangehrm:/var/www/html --quiet
+    docker exec orangehrm mv index.php BACKUP
+    docker exec orangehrm mv maintenance.php index.php
+
+    if [[ -f "${OHRM_DIR}/key.ohrm" ]]; then
+        docker cp "${OHRM_DIR}/key.ohrm" orangehrm:"${KEY_PATH}"
+    fi
+
+    tput cuu1
+    echo -e "${GREEN}Upping the container${ENDCOLOR}...............${SUCCESS_ICON}"
+}
+
+upgrade_ohrm() {
+    echo -e "${YELLOW}Upgrading OrangeHRM!${ENDCOLOR}..............${WIP_ICON}"
+    
+    docker exec orangehrm php installer/console upgrade:run --dbHost mariadb1011 --dbPort 3306 --dbName orangehrm --dbUser root --dbUserPassword root &>/dev/null
+    docker exec orangehrm rm -f index.php
+    docker exec orangehrm mv BACKUP index.php
+    
+    rm -rf "${upgradeDir}"
+
+    tput cuu1
+    echo -e "${GREEN}Upgrading OrangeHRM!${ENDCOLOR}...............${SUCCESS_ICON}"
+
+    echo -e "${GREEN}\nOrangeHRM was successfully upgraded!${ENDCOLOR}\n"
+}
+
+check_version
+upgrader_confirm
+create_backup
+copy_encryption_key
+stop_existing_ohrm
+create_new_container
+upgrade_ohrm
+
+exit 0
