@@ -4,7 +4,7 @@ set -e
 
 if [[ -z  $OHRM_DIR ]]; then
     echo -e "\nPlease run the script from the OrangeHRM command\n"
-    exit 1;
+    exit 0
 fi
 
 if [[ -f "${OHRM_DIR}/.installed" ]]; then
@@ -20,102 +20,89 @@ username=""
 password=""
 password2=""
 orgName=""
+country=""
 answer="no"
 encryptOption=""
 
+nameRegex="^[A-Za-z\s]{1,30}$"
+emailRegex="^[a-zA-Z0-9.!#$%&\'*+\\/=?^_\`{|}~-]+@[a-zA-Z0-9]([a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(\.[a-zA-Z0-9]([a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)+$"
+orgNameRegex="^[A-Za-z\s]{1,100}$"
+usernameRegex="^[A-Za-z]{5,40}$"
+passwordRegex="^.{8,64}$"
+
+# shellcheck disable=SC1091
+source "${HELPER_DIR}/countries"
+
+logFile="${LOG_DIR}/orangehrm_install.log"
+
+write_to_log() {
+	echo "[$(date)]: $1" >> "${logFile}"
+}
+
 check_prereq () {
+	write_to_log "Starting pre-requisite check"
+
 	echo -e "${YELLOW}Checking pre-requisites${ENDCOLOR}...........${WIP_ICON}"
 
 	# Check if docker is installed
 	if ! [[ $(command -v docker) ]]; then
+		write_to_log "Docker not installed"
 		tput cuu1
 		echo -e "${RED}Checking pre-requisites${ENDCOLOR}...........${ERROR_ICON}"
 		echo -e "Docker is not installed! Please re-install docker and try again"
-		exit 1
+		exit 0
 	fi
 
 	# Check if the docker service is active
 	if [[ $(sudo systemctl is-active docker) = "inactive" ]]
 	then
+		write_to_log "Docker is not active"
 		tput cuu1
 		echo -e "${RED}Checking pre-requisites${ENDCOLOR}...........${ERROR_ICON}"
 		echo -e "Docker is not active!"
 		echo -e "Please activate docker using 'sudo systemctl start docker' and retry the installation"
 		echo -e "If you want docker to start on boot you can run 'sudo systemctl enable docker' as well"
-		exit 1
+		exit 0
 	fi
 
 	# Check if docker compose is installed
 	if docker compose version 2>&1 | grep -q "docker: 'compose' is not a docker command"; then
+		write_to_log "Docker compose is not installed"
 		tput cuu1
 		echo -e "${RED}Checking pre-requisites${ENDCOLOR}...........${ERROR_ICON}"
 		echo -e "Docker Compose is not installed! Please install docker compose and try again!"
-		exit 1
+		exit 0
 	fi
 
 	tput cuu1
-	echo -e "${GREEN}Checking pre-requisites${ENDCOLOR}...........${SUCCESS_ICON}"
-}
+	echo -e "${GREEN}Checking pre-requisites${ENDCOLOR}...........${SUCCESS_ICON}\n"
 
-create_containers() {
-	echo -e "${YELLOW}Creating the containers${ENDCOLOR}...........${WIP_ICON}"
-	# Reset compose.yml
-	# git -C "${OHRM_DIR}" checkout HEAD -- compose.yml
-	docker compose --file /home/ec2-user/.orangehrm/compose.yml up --detach --remove-orphans &> /dev/null
-	sleep 2
-	docker cp "${ASSET_DIR}/MAINTENANCE" orangehrm:/var/www/html --quiet
-	docker exec orangehrm mv index.php BACKUP
-	docker exec orangehrm mv MAINTENANCE index.php
-	tput cuu1
-	echo -e "${GREEN}Creating the containers${ENDCOLOR}...........${SUCCESS_ICON}\n"
+	write_to_log "Pre-requisite check successfull"
 }
 
 early_exit () {
-	local containersActive
-
-	echo -e "\n${RED}Quitting the installation..${ENDCOLOR}"
+	write_to_log "Early exit"
+	echo -e "\n\n${RED}Quitting the installation..${ENDCOLOR}"
 	echo -e "${YELLOW}Cleaning install files${ENDCOLOR}............${WIP_ICON}"
 
-	# Boolean to determine whether to run docker prune or not
-	containersActive=false
-
-	# Check if OrangeHRM container is running
-	if [[ $(docker inspect -f '{{.State.Running}}' orangehrm 2>/dev/null) = "true" ]]
-	then
-		# Silently stop and remove the OrangeHRM container
-		docker stop orangehrm &>/dev/null
-		docker rm orangehrm &>/dev/null
-		containersActive=true
-	fi
-
+	write_to_log "Checking MariaDB container status"
 	# Check if MariaDB container is running
-	if [[ $(docker inspect -f '{{.State.Running}}' mariadb 2>/dev/null) = "true" ]]
+	if [[ $(docker inspect -f '{{.State.Running}}' mariadb &>>"${logFile}") = "true" ]]
 	then
 		# Silently drop the orangehrm database
-		docker exec mariadb mariadb -proot -e "drop database if exists orangehrm" &> /dev/null
-		# Silently stop and remove the MariaDB container
-		docker stop mariadb &>/dev/null
-		docker rm mariadb &>/dev/null
-		containersActive=true
-	fi
-	
-	if [[ $containersActive ]]
-	then
-		# Remove network and reclaim space taken by containers
-    	docker system prune -af &> /dev/null
+		docker exec mariadb mariadb -proot -e "drop database if exists orangehrm" &>>"${logFile}"
 	fi
 
-	# Check if the repository has been cloned
-	if [[ -d "/home/ec2-user/orangehrm-aws" ]]
-	then
-		# Silently remove the repository
-    	sudo rm -r /home/ec2-user/orangehrm-aws &> /dev/null
-	fi
+	write_to_log "Downing containers"
+	docker compose -f "${OHRM_DIR}/compose.yml" down &>>"${logFile}"
+	write_to_log "Running docker system prune"
+	docker system prune --all --force &>>"${logFile}"
 	
 	tput cuu1
 	echo -e "${GREEN}Cleaning install files${ENDCOLOR}............${SUCCESS_ICON}"
 	echo -e "You can run \"${GREEN}orangehrm install${ENDCOLOR}\" to restart the installation${ENDCOLOR}\n"
 
+	write_to_log "Exiting installer"
 	exit 0
 }
 
@@ -131,7 +118,8 @@ reset_answer() {
 }
 
 show_start_message() {
-	cat "${ASSET_DIR}/LOGO"
+	write_to_log "Starting installer"
+	sh "${HELPER_DIR}/logo"
 	echo -e "\n${GREEN}Starting the OrangeHRM Installation${ENDCOLOR}\n"
 }
 
@@ -140,7 +128,7 @@ get_license_agreement() {
 	read -r
 	tput cuu1
 	tput el
-	less -P "Press ENTER to read more, press q to quit" /home/ec2-user/.orangehrm/assets/LICENSE
+	less -P "Press ENTER to read more, press q to quit" /home/ec2-user/.orangehrm/assets/license.txt
 	echo -e "Do you agree to the license? ${YELLOW}[yes/no]${ENDCOLOR}"
 	read -rp "> " answer
 	yes_no_check
@@ -154,10 +142,9 @@ get_license_agreement() {
 get_first_name() {
 	echo -e "Enter the admin employee's first name ${YELLOW}[required]${ENDCOLOR}"
 	read -rp "> " firstName
-	while [[ -z "$firstName" ]]
+	while ! [[ $firstName =~ $nameRegex ]]
 	do
-		echo -e "${RED}The first name cannot be empty!${ENDCOLOR}"
-		echo -e "Enter the admin employee's first name ${YELLOW}[required]${ENDCOLOR}"
+		echo -e "${RED}Enter a valid name!${ENDCOLOR}"
 		read -rp "> " firstName
 	done
 }
@@ -165,10 +152,9 @@ get_first_name() {
 get_last_name() {
 	echo -e "Enter the admin employee's last name ${YELLOW}[required]${ENDCOLOR}"
 	read -rp "> " lastName
-	while [[ -z "$lastName" ]]
+	while ! [[ $lastName =~ $nameRegex  ]]
 	do
-		echo -e "${RED}The last name cannot be empty!${ENDCOLOR}"
-		echo -e "Enter the admin employee's last name ${YELLOW}[required]${ENDCOLOR}"
+		echo -e "${RED}Enter a valid name!${ENDCOLOR}"
 		read -rp "> " lastName
 	done
 }
@@ -176,10 +162,9 @@ get_last_name() {
 get_email() {
 	echo -e "Enter the admin employee's email ${YELLOW}[required]${ENDCOLOR}"
 	read -rp "> " email
-	while [[ -z "$email" ]]
+	while ! [[ $email =~ $emailRegex  ]]
 	do
-		echo -e "${RED}The email cannot be empty!${ENDCOLOR}"
-		echo -e "Enter the admin employee's email ${YELLOW}[required]${ENDCOLOR}"
+		echo -e "${RED}Enter a valid email!${ENDCOLOR}"
 		read -rp "> " email
 	done
 }
@@ -187,62 +172,82 @@ get_email() {
 get_org_name() {
 	echo -e "Enter the name of your organization ${YELLOW}[required]${ENDCOLOR}"
 	read -rp "> " orgName
-	while [[ -z "$orgName" ]]
+	while ! [[ $orgName =~ $orgNameRegex ]]
 	do
-		echo -e "${RED}The organisation name cannot be empty!${ENDCOLOR}"
-		echo -e "Enter the name of your organization ${YELLOW}[required]${ENDCOLOR}"
+		echo -e "${RED}Enter a valid name!${ENDCOLOR}"
 		read -rp "> " orgName
 	done
 }
 
-get_country_code() {
-	echo -e "Select your country code ${YELLOW}[type the number]${ENDCOLOR}"
-	select country in $(tr '\n' ' ' < /home/ec2-user/.orangehrm/assets/COUNTRIES)
-	do 
-		if [[ -z "$country" ]]
-		then
-			echo -e "${RED}Please select a country${ENDCOLOR}"
-		else
-			break
-		fi
+# shellcheck disable=SC2154
+list_countries() {
+	for code in "${!countries[@]}"; do 
+		echo "${code}: ${countries[$code]}"
 	done
 }
 
+# shellcheck disable=SC1091,SC2154,SC2001
+get_country_code() {
+	local countryDir
+	countryDir="${OHRM_DIR}/.countries"
+	
+	if [[ -d "${countryDir}" ]]; then
+		rm -rf "${countryDir}"
+	fi
+
+	write_to_log "Creating country directory"
+	mkdir -p "${countryDir}"
+	pushd "${countryDir}" &>>"${logFile}"
+	for code in "${!countries[@]}"; do 
+		touch "${code}"	
+	done
+
+	echo -e "Enter the your country code ${YELLOW}[use TAB for suggestions, type 'list' to view codes]${ENDCOLOR}"
+	while true; do
+		read -e -r -p "> " country
+		# Don't store country in log
+		if [[ -n "${country}" ]] && find "${countryDir}/${country}" &>/dev/null; then
+			break
+		elif [[ $country = "list" ]]; then
+			list_countries
+		else
+			echo -e "${RED}Please enter a valid country code!${ENDCOLOR}!"
+		fi
+	done
+
+	write_to_log "Removing country directory"
+	echo -e "Selected country: ${countries[$country]}"
+
+	popd &>>"${logFile}"
+	rm -rf "${countryDir}"
+}
+
 get_username() {
-	echo -e "Enter the admin username ${YELLOW}[required]${ENDCOLOR}"
+	echo -e "Enter the admin username (between 5-40 characters) ${YELLOW}[required]${ENDCOLOR}"
 	read -rp "> " username
-	while [[ -z "$username" ]]
+	while ! [[ $username =~ $usernameRegex ]]
 	do
-		echo -e "${RED}The username cannot be empty!${ENDCOLOR}"
-		echo -e "Enter the admin username ${YELLOW}[required]${ENDCOLOR}"
+		echo -e "${RED}Enter a valid username!${ENDCOLOR}"
 		read -rp "> " username
 	done
 }
 
 get_password() {
-	echo -e "Enter the admin password ${YELLOW}[hidden]${ENDCOLOR}"
+	echo -e "Enter the admin password (between 8 to 64 characters) ${YELLOW}[hidden]${ENDCOLOR}"
 	read -s -rp "> " password
-	while [[ -z "$password" ]]
+	while ! [[ $password =~ $passwordRegex ]]
 	do
-		echo -e "\n${RED}The password cannot be empty!${ENDCOLOR}"
-		echo -e "Enter the admin password ${YELLOW}[hidden]${ENDCOLOR}"
+		echo -e "\n${RED}Enter a valid password!${ENDCOLOR}"
 		read -s -rp "> " password
 	done
 	echo -e "\nRe-enter the admin password ${YELLOW}[hidden]${ENDCOLOR}"
 	read -s -rp "> " password2
-	while [[ "$password" != "$password2" ]]
-	do
+}
+
+password_compare() {
+	while [[ $password != "${password2}" ]]; do
 		echo -e "\n${RED}The passwords were not the same!${ENDCOLOR}"
-		echo -e "Enter the admin password ${YELLOW}[hidden]${ENDCOLOR}"
-		read -s -rp "> " password
-		while [[ -z "$password" ]]
-		do
-			echo -e "\n${RED}The password cannot be empty!${ENDCOLOR}"
-			echo -e "Enter the admin password ${YELLOW}[hidden]${ENDCOLOR}"
-			read -s -rp "> " password
-		done
-		echo -e "\nRe-enter the admin password ${YELLOW}[hidden]${ENDCOLOR}"
-		read -s -rp "> " password2
+		get_password
 	done
 }
 
@@ -265,13 +270,14 @@ show_config() {
 	echo -e "${GREEN}Last Name${ENDCOLOR}: 	    $lastName"
 	echo -e "${GREEN}Work Email${ENDCOLOR}: 	    $email"
 	echo -e "${GREEN}Org Name${ENDCOLOR}: 	    $orgName"
-	echo -e "${GREEN}Country${ENDCOLOR}:	    $country"
+	echo -e "${GREEN}Country${ENDCOLOR}:	    ${countries[$country]}"
 	echo -e "${GREEN}Username${ENDCOLOR}: 	    $username"
 	echo -e "${GREEN}Data Encryption${ENDCOLOR}:    $encryptOption"
 	echo "==============================="
 }
 
 get_config_values() {
+	write_to_log "Getting config values"
 	local fields
 	fields=("First Name" "Last Name" "Work Email" "Org Name" "Country" "Username" "Password" "Data Encryption")
 
@@ -282,6 +288,7 @@ get_config_values() {
 	get_country_code
 	get_username
 	get_password
+	password_compare
 	get_encrypt
 
 	echo -e "\nPlease confirm the following"
@@ -292,42 +299,103 @@ get_config_values() {
 	if [[ $answer =~ $NO_REGEX ]]; then
 		echo -e "\nPlease choose a field to edit (or select quit)"
 		select field in "${fields[@]}" "quit"; do
-			if [[ $field = "quit" ]]; then
-				break;
-			elif [[ $field = "First Name" ]]; then
-				echo "Current Value: ${firstName}"
-				get_first_name
-			elif [[ $field = "Last Name" ]]; then
-				echo "Current Value: ${lastName}"
-				get_last_name
-			elif [[ $field = "Work Email" ]]; then
-				echo "Current Value: ${email}"
-				get_email
-			elif [[ $field = "Org Name" ]]; then
-				echo "Current Value: ${orgName}"
-				get_org_name
-			elif [[ $field = "Country" ]]; then
-				echo "Current Value: ${country}"
-				get_country_code
-			elif [[ $field = "Username" ]]; then
-				echo "Current Value: ${username}"
-				get_username
-			elif [[ $field = "Password" ]]; then
-				get_password
-			elif [[ $field = "Data Encryption" ]]; then
-				get_encrypt
-			else
-				echo "Invalid option"
-			fi
+			case $field in
+				quit)
+					break;
+					;;
+				"First Name")
+					echo "Current Value: ${firstName}"
+					get_first_name
+					;;
+				"Last Name")
+					echo "Current Value: ${lastName}"
+					get_last_name
+					;;
+				"Work Email")
+					echo "Current Value: ${email}"
+					get_email
+					;;
+				"Org Name")
+					echo "Current Value: ${orgName}"
+					get_org_name
+					;;
+				"Country Code")
+					echo "Current Value: ${country}"
+					get_country_code
+					;;
+				"Username")
+					echo "Current Value: ${username}"
+					get_username
+					;;
+				"Password")
+					get_password
+					;;
+				"Data Encryption")
+					get_encrypt
+					;;
+				*)
+					echo "Invalid Option"
+					;;
+			esac
 			show_config
 		done
 	fi
+	write_to_log "Obtained config values"
 }
 
+write_env() {
+	local randomPW
+	local timeoutCount
+
+	timeoutCount=0
+	while true; do
+		randomPW="$(docker logs mariadb 2>&1 | grep 'GENERATED ROOT PASSWORD:' | sed 's/.*GENERATED ROOT PASSWORD: //')"
+		if [[ -z "${randomPW}" ]]; then
+			sleep 1
+			timeoutCount=$((timeoutCount++))
+		else
+			break
+		fi
+
+		if [[ timeoutCount -gt 20 ]]; then
+			write_to_log "Timeout while trying to get generated root password"
+			exit 1
+		fi
+	done
+
+	echo "MARIADB_ROOT_PW=\"${randomPW}\"" > "${OHRM_DIR}/.env"
+}
+
+create_containers() {
+	write_to_log "Creating containers"
+	echo -e "\n${YELLOW}Creating the containers${ENDCOLOR}...........${WIP_ICON}"
+
+	write_to_log "Upping containers"
+	docker compose --file /home/ec2-user/.orangehrm/compose.yml up --detach --remove-orphans &>>"${logFile}"
+
+	write_to_log "Creating .env"
+	write_env
+
+	write_to_log "Setting maintenance page"
+	docker cp "${ASSET_DIR}/maintenance.php" orangehrm:/var/www/html &>>"${logFile}"
+	docker exec orangehrm mv index.php BACKUP
+	docker exec orangehrm mv maintenance.php index.php
+
+	tput cuu1
+	echo -e "${GREEN}Creating the containers${ENDCOLOR}...........${SUCCESS_ICON}"
+	write_to_log "Containers created"
+}
+
+# shellcheck disable=SC1091
 update_configuration() {
-	echo -e "\n${YELLOW}Updating install configuration${ENDCOLOR}....${WIP_ICON}"
+	write_to_log "Updating configuration"
+
+	source "${OHRM_DIR}/.env"
+
+	echo -e "${YELLOW}Updating install configuration${ENDCOLOR}....${WIP_ICON}"
 	docker exec orangehrm sed -i 's/hostName: 127.0.0.1/hostName: mariadb1011/' installer/cli_install_config.yaml
 	docker exec orangehrm sed -i 's/databaseName: orangehrm_mysql/databaseName: orangehrm/' installer/cli_install_config.yaml
+	docker exec orangehrm sed -i "s~privilegedDatabasePassword: root~privilegedDatabasePassword: UDX5TzB!sMI;S=p1GK,d^7mi0A5X[/E!~" installer/cli_install_config.yaml
 	docker exec orangehrm sed -i "s/adminEmployeeFirstName: OrangeHRM/adminEmployeeFirstName: $firstName/" installer/cli_install_config.yaml
 	docker exec orangehrm sed -i "s/adminEmployeeLastName: Admin/adminEmployeeLastName: $lastName/" installer/cli_install_config.yaml
 	docker exec orangehrm sed -i "s/adminUserName: Admin/adminUserName: $username/" installer/cli_install_config.yaml
@@ -340,21 +408,36 @@ update_configuration() {
 	
 	tput cuu1
 	echo -e "${GREEN}Updating install configuration${ENDCOLOR}....${SUCCESS_ICON}"
+	write_to_log "Configuration updated"
 }
 
 install_orangehrm() {
+	write_to_log "Installing system"
 	echo -e "${YELLOW}Installing OrangeHRM${ENDCOLOR}..............${WIP_ICON}"
-	docker exec orangehrm php installer/cli_install.php &>/dev/null
+	docker exec orangehrm php installer/cli_install.php &>>"${logFile}"
 
 	docker exec orangehrm rm -f index.php
 	docker exec orangehrm mv BACKUP index.php
 
 	tput cuu1
 	echo -e "${GREEN}Installing OrangeHRM${ENDCOLOR}..............${SUCCESS_ICON}"
+	write_to_log "System installed"
 }
 
+# TO-DO change!!
 write_install_file() {
-	printf "DO NOT DELETE THIS FILE! This file let's the instance know that OrangeHRM is installed!" > "${OHRM_DIR}/.installed"
+	local version 
+	local installFile
+	version=$(grep "    image: orangehrm/orangehrm:" "${OHRM_DIR}/compose.yml" | sed 's/    image: orangehrm\/orangehrm://')
+	installFile="${OHRM_DIR}/.installed"
+
+	{
+		printf "#!/bin/bash\n\n"
+		printf "# DO NOT DELETE THIS FILE!\n"
+		printf "# This file contains information about the installed version of OrangeHRM\n\n"
+		printf "export OHRM_VERSION=%s" "${version}"
+	} > "${installFile}"
+
 	echo -e "\n${GREEN}OrangeHRM is finished installing!${ENDCOLOR}"
 }
 
@@ -367,17 +450,23 @@ print_aws_ip() {
 	echo -e "\nVisit ${GREEN}http://${ohrmIP}${ENDCOLOR} to access your OrangeHRM system!"
 }
 
+create_backup() {
+	sh "${SCRIPT_DIR}/backup"
+	echo -e "NOTE: An initial backup of your system has been created\n"
+}
+
 # Catch CTRL-C
 trap early_exit SIGINT
 
 show_start_message
 check_prereq
-create_containers
 get_license_agreement
 get_config_values
+create_containers
 update_configuration
 install_orangehrm
 write_install_file
 print_aws_ip
+create_backup
 
 exit 0
