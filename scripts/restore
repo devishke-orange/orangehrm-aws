@@ -35,10 +35,20 @@ do
     docker compose --file "${OHRM_DIR}/compose.yml" down &>/dev/null
     cp "${backup}/compose.yml" "${OHRM_DIR}/compose.yml"
     docker compose --file "${OHRM_DIR}/compose.yml" up --detach --remove-orphans &>/dev/null
+    
     sleep 2
+
+    docker cp "${ASSET_DIR}/maintenance.php" orangehrm:/var/www/html --quiet
+    docker exec orangehrm mv index.php BACKUP
+    docker exec orangehrm mv maintenance.php index.php
+
     docker cp "${backup}/Conf.php" orangehrm:/var/www/html/lib/confs/Conf.php --quiet
     docker cp "${backup}/key.ohrm" orangehrm:/var/www/html/lib/confs/cryptokeys/key.ohrm --quiet
     docker exec -i mariadb sh -c 'exec mariadb -uroot -proot' < "${backup}/mariadb.sql"
+
+    docker exec orangehrm rm -f index.php
+    docker exec orangehrm mv BACKUP index.php
+    
     break;
 done
 
