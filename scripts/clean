@@ -12,18 +12,19 @@ while ! [[ $answer =~ $YES_REGEX|$NO_REGEX ]]; do
     read -rp "> " answer
 done
 
-if [[ answer =~ $NO_REGEX ]]; then
+if [[ $answer =~ $NO_REGEX ]]; then
     echo -e "Quitting..\n"
     exit 0
 fi
 
 echo -e "\n${YELLOW}Wiping OrangeHRM data${ENDCOLOR}.............${WIP_ICON}"
 
-if [[ $(docker inspect -f '{{.State.Running}}' mariadb 2>/dev/null) = "true" ]]; then
-    docker exec mariadb mariadb -proot -e "drop database if exists orangehrm"
-fi
+# if [[ $(docker inspect -f '{{.State.Running}}' mariadb 2>/dev/null) = "true" ]]; then
+#     docker exec mariadb mariadb -proot -e "drop database if exists orangehrm"
+# fi
 docker compose --file "${OHRM_DIR}/compose.yml" down &>/dev/null
 docker system prune --all --force &>/dev/null
+docker volume rm orangehrm_orangehrm-data &>/dev/null
 rm --force "${OHRM_DIR}/.installed"
 rm --recursive --force "${OHRM_DIR}/backups/*"
 
