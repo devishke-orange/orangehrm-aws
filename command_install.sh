@@ -38,4 +38,4 @@ fi
 cp /home/ec2-user/.orangehrm/scripts/login_orangehrm /home/ec2-user/.orangehrm/login_orangehrm.sh
 
 printf "The login script has been created at /home/ec2-user/.orangehrm/login_orangehrm.sh\n"
-printf "Move it to /etc/profile.d using 'sudo mv /home/ec2-user/.orangehrm/login_orangehrm.sh /etc/profile.d/'"
+printf "Move it to /etc/profile.d using 'sudo mv /home/ec2-user/.orangehrm/login_orangehrm.sh /etc/profile.d/'\n\n"
