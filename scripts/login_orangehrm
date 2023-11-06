@@ -8,10 +8,16 @@ supress_message() {
     printf "To supress this message remove login_orangehrm.sh from /etc/profile.d\n\n"
 }
 
+update_message() {
+    dnf check-release-update
+}
+
 if ! [[ -f /home/ec2-user/.orangehrm/scripts/status ]]; then
     printf "The status script has been removed!\n"
+    update_message
     supress_message
 fi
 
-orangehrm status
+sh /home/ec2-user/.orangehrm/scripts/status
+update_message
 supress_message
