@@ -1,0 +1,21 @@
+#!/bin/bash
+
+now=$(date +"%Y_%m_%d_%H_%M_%S")
+containerLogDir="/var/www/html/src/log"
+localLogDir="${HOME}/orangehrm_logs/${now}"
+
+echo -e "\nThis command will retrieve logs from the OrangeHRM container and store them at ${HOME}/orangehrm_logs\n"
+
+mkdir -p "${localLogDir}"
+
+echo -e "${YELLOW}Copying logs${ENDCOLOR}......................${WIP_ICON}"
+docker cp orangehrm:"${containerLogDir}" "${localLogDir}" --quiet
+tput cuu1
+echo -e "${GREEN}Copying logs${ENDCOLOR}......................${SUCCESS_ICON}\n"
+
+echo -e "Your logs are available at ${localLogDir}\n"
+
+echo -e "If you want to transfer them to your local machine, you can try the following commmand on your local machine:"
+token=$(curl -s -X PUT "http://169.254.169.254/latest/api/token" -H "X-aws-ec2-metadata-token-ttl-seconds: 21600")
+ohrmIP=$(curl -s -H "X-aws-ec2-metadata-token: ${token}" http://169.254.169.254/latest/meta-data/public-ipv4)
+echo -e "'${GREEN}scp -i your_identity_file -r ${USER}@${ohrmIP}:${localLogDir} your_local_path${ENDCOLOR}'\n"
