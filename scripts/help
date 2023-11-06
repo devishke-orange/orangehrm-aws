@@ -1,0 +1,14 @@
+#!/bin/bash
+
+echo -e "\nOrangeHRM Command (v 1.0)\n"
+echo -e "This command allows you to manage your OrangeHRM AWS instance completely from the terminal.\n"
+echo "Usage:"
+echo -e "\torangehrm install                   Start the OrangeHRM web application installation"
+echo -e "\torangehrm update                   Upgrade an existing instance of the OrangeHRM web application"
+echo -e "\torangehrm check-update              Check for a new version of the OrangeHRM web application"
+echo -e "\torangehrm status                    Display the installed status of the OrangeHRM web application"
+echo -e "\torangehrm backup                    Backup an existing instance of the OrangeHRM web application"
+echo -e "\torangehrm restore                   Restore a backup of the OrangeHRM web application"
+echo -e "\torangehrm help                      Display this message\n"
+
+echo -e "To remove the orangehrm command, delete /home/ec2-user/.orangehrm\n"
