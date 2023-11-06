@@ -2,7 +2,9 @@
 
 export OHRM_DIR=/home/ec2-user/.orangehrm
 export SCRIPT_DIR="${OHRM_DIR}/scripts"
+export HELPER_DIR="${SCRIPT_DIR}/helper"
 export ASSET_DIR="${OHRM_DIR}/assets"
+export LOG_DIR="${OHRM_DIR}/logs"
 
 export RED="\e[1;31m"
 export GREEN="\e[1;32m"
@@ -14,10 +16,6 @@ export ERROR_ICON="🔴"
 
 export YES_REGEX="^y(e|es)?$"
 export NO_REGEX="^n(o)?$"
-
-help() {
-    cat "${ASSET_DIR}/HELP"
-}
 
 check_installed() {
     if ! [[ -f "${OHRM_DIR}/.installed" ]]; then
@@ -53,11 +51,29 @@ cleanup() {
 
 # shellcheck disable=SC2317
 err_exit() {
+    echo -e "\n${RED}Something has gone wrong!${ENDCOLOR}"
+    cp -r "${LOG_DIR}" "${HOME}/orangehrm_command_logs"
+    echo -e "Please find the relevant logs files at ${GREEN}${HOME}/orangehrm_command_logs\n${ENDCOLOR}"
+    cleanup
+    exit 1
+}
+
+# shellcheck disable=SC2317
+install_err_exit() {
+    echo -e "\n${RED}Something has gone wrong!${ENDCOLOR}"
+    cp -rf "${LOG_DIR}" "${HOME}"
+    echo -e "Please find the relevant logs files at ${GREEN}${HOME}/logs\n${ENDCOLOR}"
+    echo -e "Please run ${GREEN}orangehrm clean${ENDCOLOR} and try installing again"
     cleanup
     exit 1
 }
 
 trap err_exit ERR
+
+# Create log dir
+if ! [[ -d "${LOG_DIR}" ]]; then
+    mkdir -p "${LOG_DIR}"
+fi
 
 if [[ $# -eq 0 ]]; then
     # If no arguments
@@ -65,17 +81,17 @@ if [[ $# -eq 0 ]]; then
 else
     case $1 in
         install)
+            trap install_err_exit ERR
             ohrm_script install
-            ohrm_script backup
-            echo -e "NOTE: An initial backup of your system has been created\n"
             ;;
-        upgrade)
-            ohrm_script upgrade check
+        update)
+            ohrm_script update check
             ;;
         backup)
             ohrm_script backup check
             ;;
         restore)
+            # Add option to disable check
             ohrm_script restore check
             ;;
         clean)
@@ -85,14 +101,18 @@ else
             ohrm_script status
             ;;
         check-update)
-            ohrm_script check-update check
+            ohrm_script check_update check
+            ;;
+        get-logs)
+            ohrm_script get_logs check
             ;;
         help)
-            help
+            ohrm_script help
             ;;
         *)
             echo -e "\n${RED}${1}${ENDCOLOR} is not an orangehrm command"
             echo -e "See '${GREEN}orangehrm help${ENDCOLOR}'\n" 
+            ;;
     esac
 fi
 
