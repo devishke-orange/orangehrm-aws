@@ -49,7 +49,7 @@ check_prereq () {
 		write_to_log "Docker not installed"
 		tput cuu1
 		echo -e "${RED}Checking pre-requisites${ENDCOLOR}...........${ERROR_ICON}"
-		echo -e "Docker is not installed! Please re-install docker and try again"
+		echo -e "Docker is not installed! Please install docker and try again"
 		exit 0
 	fi
 
@@ -71,6 +71,14 @@ check_prereq () {
 		tput cuu1
 		echo -e "${RED}Checking pre-requisites${ENDCOLOR}...........${ERROR_ICON}"
 		echo -e "Docker Compose is not installed! Please install docker compose and try again!"
+		exit 0
+	fi
+
+	if ! [[ $(command -v pwgen) ]]; then
+		write_to_log "pwgen not installed"
+		tput cuu1
+		echo -e "${RED}Checking pre-requisites${ENDCOLOR}...........${ERROR_ICON}"
+		echo -e "pwgen is not installed! Please install pwgen and try again"
 		exit 0
 	fi
 
@@ -343,14 +351,25 @@ get_config_values() {
 	write_to_log "Obtained config values"
 }
 
+write_env() {
+	# Create a password using pwgen with the following attributes:
+	# 	32 characters long
+	#	Capital letters
+	#	Numbers
+	#	Avoiding special characters as certain characters cause issues
+	echo "MARIADB_ROOT_PW='$(pwgen -c -n 32 1)'" > "${OHRM_DIR}/.env"
+}
+
 create_containers() {
 	write_to_log "Creating containers"
 	echo -e "\n${YELLOW}Creating the containers${ENDCOLOR}...........${WIP_ICON}"
 
-	write_to_log "Upping containers"
-	docker compose --file /home/ec2-user/.orangehrm/compose.yml up --detach --remove-orphans &>>"${logFile}"
-	sleep 5
+	write_to_log "Creating .env"
+	write_env
 
+	write_to_log "Upping containers"
+	docker compose --env-file "${OHRM_DIR}/.env" --file "${OHRM_DIR}/compose.yml" up --detach --remove-orphans &>>"${logFile}"
+	
 	write_to_log "Setting maintenance page"
 	docker cp "${ASSET_DIR}/maintenance.php" orangehrm:/var/www/html &>>"${logFile}"
 	docker exec orangehrm mv index.php BACKUP
@@ -362,20 +381,24 @@ create_containers() {
 }
 
 update_configuration() {
+	echo -e "${YELLOW}Updating install configuration${ENDCOLOR}....${WIP_ICON}"
 	write_to_log "Updating configuration"
 
-	echo -e "${YELLOW}Updating install configuration${ENDCOLOR}....${WIP_ICON}"
-	docker exec orangehrm sed -i 's/hostName: 127.0.0.1/hostName: mariadb1011/' installer/cli_install_config.yaml
-	docker exec orangehrm sed -i 's/databaseName: orangehrm_mysql/databaseName: orangehrm/' installer/cli_install_config.yaml
-	docker exec orangehrm sed -i "s/adminEmployeeFirstName: OrangeHRM/adminEmployeeFirstName: $firstName/" installer/cli_install_config.yaml
-	docker exec orangehrm sed -i "s/adminEmployeeLastName: Admin/adminEmployeeLastName: $lastName/" installer/cli_install_config.yaml
-	docker exec orangehrm sed -i "s/adminUserName: Admin/adminUserName: $username/" installer/cli_install_config.yaml
-	docker exec orangehrm sed -i "s/adminPassword: Ohrm@1423/adminPassword: $password/" installer/cli_install_config.yaml
-	docker exec orangehrm sed -i "s/workEmail: admin@example.com/workEmail: $email/" installer/cli_install_config.yaml
-	docker exec orangehrm sed -i "s/ name: OrangeHRM/ name: $orgName/" installer/cli_install_config.yaml
-	docker exec orangehrm sed -i "s/country: US/country: $country/" installer/cli_install_config.yaml
-	docker exec orangehrm sed -i "s/enableDataEncryption: n/enableDataEncryption: $encryptOption/" installer/cli_install_config.yaml
-	docker exec orangehrm sed -i "s/registrationConsent: true/registrationConsent: false/" installer/cli_install_config.yaml
+	source "${OHRM_DIR}/.env"
+
+	docker exec orangehrm sed -i 's/hostName: 127.0.0.1/hostName: mariadb1011/' installer/cli_install_config.yaml 2>>"${logFile}"
+	docker exec orangehrm sed -i 's/databaseName: orangehrm_mysql/databaseName: orangehrm/' installer/cli_install_config.yaml 2>>"${logFile}"
+	# GNU sed allows for backslashes as delimiters. May not be compatible with other versions of sed
+	docker exec orangehrm sed -i "s\privilegedDatabasePassword: root\privilegedDatabasePassword: $MARIADB_ROOT_PW\ " installer/cli_install_config.yaml 2>>"${logFile}"
+	docker exec orangehrm sed -i "s/adminEmployeeFirstName: OrangeHRM/adminEmployeeFirstName: $firstName/" installer/cli_install_config.yaml 2>>"${logFile}"
+	docker exec orangehrm sed -i "s/adminEmployeeLastName: Admin/adminEmployeeLastName: $lastName/" installer/cli_install_config.yaml 2>>"${logFile}" 
+	docker exec orangehrm sed -i "s/adminUserName: Admin/adminUserName: $username/" installer/cli_install_config.yaml 2>>"${logFile}"
+	docker exec orangehrm sed -i "s/adminPassword: Ohrm@1423/adminPassword: $password/" installer/cli_install_config.yaml 2>>"${logFile}"
+	docker exec orangehrm sed -i "s/workEmail: admin@example.com/workEmail: $email/" installer/cli_install_config.yaml 2>>"${logFile}"
+	docker exec orangehrm sed -i "s/ name: OrangeHRM/ name: $orgName/" installer/cli_install_config.yaml 2>>"${logFile}"
+	docker exec orangehrm sed -i "s/country: US/country: $country/" installer/cli_install_config.yaml 2>>"${logFile}"
+	docker exec orangehrm sed -i "s/enableDataEncryption: n/enableDataEncryption: $encryptOption/" installer/cli_install_config.yaml 2>>"${logFile}"
+	docker exec orangehrm sed -i "s/registrationConsent: true/registrationConsent: false/" installer/cli_install_config.yaml 2>>"${logFile}"
 	
 	tput cuu1
 	echo -e "${GREEN}Updating install configuration${ENDCOLOR}....${SUCCESS_ICON}"
@@ -385,6 +408,10 @@ update_configuration() {
 install_orangehrm() {
 	write_to_log "Installing system"
 	echo -e "${YELLOW}Installing OrangeHRM${ENDCOLOR}..............${WIP_ICON}"
+
+	# Small period for containers to initialize. Installation will fail without this.
+	sleep 5
+
 	docker exec orangehrm php installer/cli_install.php &>>"${logFile}"
 
 	docker exec orangehrm rm -f index.php
@@ -409,7 +436,7 @@ write_install_file() {
 		printf "export OHRM_VERSION=%s" "${version}"
 	} > "${installFile}"
 
-	echo -e "\n${GREEN}OrangeHRM is finished installing!${ENDCOLOR}"
+	echo -e "\n${GREEN}OrangeHRM ${version} is finished installing!${ENDCOLOR}"
 }
 
 print_aws_ip() {
