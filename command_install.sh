@@ -2,10 +2,6 @@
 
 # This script will clone the AWS repository and create the login script
 
-printf "\nWARNING: docker compose is not installed!\n"
-printf "The user will not be able to continue with OrangeHRM installation\n"
-printf "Refer: https://docs.docker.com/compose/install/linux/#install-the-plugin-manually\n\n"
-
 # Check if git is installed
 if ! [[ $(command -v git) ]]; then
     printf "\nGit is not installed!\n"
@@ -20,6 +16,8 @@ fi
 
 git clone https://github.com/devishke-orange/orangehrm-aws --quiet /home/ec2-user/.orangehrm
 
+printf "The repository has been successfully cloned!\n\n"
+
 # Check if docker & docker compose are installed
 if ! [[ $(command -v docker) ]]; then
     printf "\nWARNING: docker is not installed!\n"
@@ -31,11 +29,11 @@ elif docker compose version 2>&1 | grep -q "docker: 'compose' is not a docker co
     printf "Refer: https://docs.docker.com/compose/install/linux/#install-the-plugin-manually\n\n"
 fi
 
-if [[ -f /home/ec2-user/login_orangehrm.sh ]]; then
-    rm -f /home/ec2-user/login_orangehrm.sh
+if [[ -f "${HOME}/login_orangehrm.sh" ]]; then
+    rm -f "${HOME}/login_orangehrm.sh"
 fi
 
-cp /home/ec2-user/.orangehrm/scripts/login_orangehrm /home/ec2-user/.orangehrm/login_orangehrm.sh
+cp /home/ec2-user/.orangehrm/scripts/login_orangehrm "${HOME}/login_orangehrm.sh"
 
-printf "The login script has been created at /home/ec2-user/.orangehrm/login_orangehrm.sh\n"
-printf "Move it to /etc/profile.d using 'sudo mv /home/ec2-user/.orangehrm/login_orangehrm.sh /etc/profile.d/'\n\n"
+printf "The login script has been created at %s/login_orangehrm.sh\n" "${HOME}"
+printf "Move it to /etc/profile.d using 'sudo mv %s/login_orangehrm.sh /etc/profile.d/'\n\n" "${HOME}"
