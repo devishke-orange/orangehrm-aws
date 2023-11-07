@@ -18,6 +18,6 @@ if ! [[ -f /home/ec2-user/.orangehrm/scripts/status ]]; then
     supress_message
 fi
 
-sh /home/ec2-user/.orangehrm/scripts/status
+orangehrm status
 update_message
 supress_message
