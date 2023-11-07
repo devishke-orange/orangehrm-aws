@@ -89,8 +89,10 @@ create_new_container() {
 
 upgrade_ohrm() {
     echo -e "${YELLOW}Upgrading OrangeHRM!${ENDCOLOR}..............${WIP_ICON}"
+
+    source "${OHRM_DIR}/.env"
     
-    docker exec orangehrm php installer/console upgrade:run --dbHost mariadb1011 --dbPort 3306 --dbName orangehrm --dbUser root --dbUserPassword root &>/dev/null
+    docker exec orangehrm php installer/console upgrade:run --dbHost mariadb1011 --dbPort 3306 --dbName orangehrm --dbUser root --dbUserPassword "${MARIADB_ROOT_PW}" &>/dev/null
     docker exec orangehrm rm -f index.php
     docker exec orangehrm mv BACKUP index.php
     
