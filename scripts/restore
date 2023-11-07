@@ -34,9 +34,8 @@ do
 
     docker compose --file "${OHRM_DIR}/compose.yml" down &>/dev/null
     cp "${backup}/compose.yml" "${OHRM_DIR}/compose.yml"
+    cp "${backup}/.installed" "${OHRM_DIR}/.installed"
     docker compose --file "${OHRM_DIR}/compose.yml" up --detach --remove-orphans &>/dev/null
-    
-    sleep 2
 
     docker cp "${ASSET_DIR}/maintenance.php" orangehrm:/var/www/html --quiet
     docker exec orangehrm mv index.php BACKUP
@@ -44,7 +43,12 @@ do
 
     docker cp "${backup}/Conf.php" orangehrm:/var/www/html/lib/confs/Conf.php --quiet
     docker cp "${backup}/key.ohrm" orangehrm:/var/www/html/lib/confs/cryptokeys/key.ohrm --quiet
-    docker exec -i mariadb sh -c 'exec mariadb -uroot -proot' < "${backup}/mariadb.sql"
+
+    sleep 5
+
+    source "${OHRM_DIR}/.env"
+
+    docker exec -i mariadb sh -c "exec mariadb -uroot -p${MARIADB_ROOT_PW}" < "${backup}/mariadb.sql"
 
     docker exec orangehrm rm -f index.php
     docker exec orangehrm mv BACKUP index.php
@@ -54,6 +58,8 @@ done
 
 tput cuu1
 echo -e "${GREEN}Restoring Backup${ENDCOLOR}..................${SUCCESS_ICON}"
-echo -e "OrangeHRM backup successfully restored!\n"
+
+source "${OHRM_DIR}/.installed"
+echo -e "OrangeHRM ${OHRM_VERSION} backup successfully restored!\n"
 
 exit 0
