@@ -409,7 +409,8 @@ install_orangehrm() {
 	write_to_log "Installing system"
 	echo -e "${YELLOW}Installing OrangeHRM${ENDCOLOR}..............${WIP_ICON}"
 
-	# Small period for containers to initialize. Installation will fail without this.
+	# Small period for database container to finish initializing.
+	# Installation will fail with a "Connection Refused" error without this
 	sleep 5
 
 	docker exec orangehrm php installer/cli_install.php &>>"${logFile}"
