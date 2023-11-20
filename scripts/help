@@ -1,14 +1,44 @@
 #!/bin/bash
 
-echo -e "\nOrangeHRM Command (v 1.0)\n"
-echo -e "This command allows you to manage your OrangeHRM AWS instance completely from the terminal.\n"
-echo "Usage:"
-echo -e "\torangehrm install                   Start the OrangeHRM web application installation"
-echo -e "\torangehrm update                   Upgrade an existing instance of the OrangeHRM web application"
-echo -e "\torangehrm check-update              Check for a new version of the OrangeHRM web application"
-echo -e "\torangehrm status                    Display the installed status of the OrangeHRM web application"
-echo -e "\torangehrm backup                    Backup an existing instance of the OrangeHRM web application"
-echo -e "\torangehrm restore                   Restore a backup of the OrangeHRM web application"
-echo -e "\torangehrm help                      Display this message\n"
+if [[ -z  $OHRM_DIR ]]; then
+    printf "\nPlease run this script from the OrangeHRM command\n"
+    printf "i.e. orangehrm help\n\n"
+    exit 1;
+fi
 
-echo -e "To remove the orangehrm command, delete /home/ec2-user/.orangehrm\n"
+# Provide the command in the first argument
+# Provide the description in the next arguments. Each argument will create a new line
+print_help_message() {
+    printf "%-30b %b" "$1" "$2"
+
+    local currentArg
+    currentArg=3
+
+    # Print additional lines
+    while [[ currentArg -le $# ]]; do
+        printf "%30b %b" "" "${!currentArg}"
+        currentArg=$((currentArg+1))
+    done
+}
+
+tput bold
+printf "\nOrangeHRM Command\n\n"
+tput sgr0
+printf "This command allows you to manage your OrangeHRM AWS instance completely from the terminal.\n"
+printf "Usage:\n"
+print_help_message "  orangehrm help" "Display this message\n"
+print_help_message "  orangehrm install" "Start the OrangeHRM web application installation.\n"
+print_help_message "  orangehrm update" "Upgrade an existing instance of the OrangeHRM web application.\n"
+print_help_message "  orangehrm check-update" "Check for an available update to the OrangeHRM web application.\n"
+print_help_message "  orangehrm status" "Display the installed status of the OrangeHRM web applcation.\n" "If you have moved login_orangehrm.sh to /etc/profile.d, this will run on SSH.\n"
+print_help_message "  orangehrm backup" "Access the orangehrm backup utility.\n" "Without additional arguments, this will run 'orangehrm backup help'.\n"
+print_help_message "    orangehrm backup help" "Display the help message for the orangehrm backup utility.\n"
+print_help_message "    orangehrm backup create" "Create a backup of your existing OrangeHRM web application instance.\n"
+print_help_message "    orangehrm backup restore" "Restore a previously created backup of your OrangeHRM instance.\n"
+print_help_message "    orangherm backup list" "List your existing backups\n"
+print_help_message "    orangehrm backup clean" "Permanently delete your existing backups\n"
+print_help_message "  orangehrm clean" "Permanently remove all your OrangeHRM data!\n"
+
+printf "\nFor any further concerns, you can contact us at ossupport@orangehrm.com\n\n"
+
+# echo -e "To remove the orangehrm command, delete /home/ec2-user/.orangehrm\n"

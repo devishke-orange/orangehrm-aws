@@ -1,28 +1,98 @@
 #!/bin/bash
 
 export OHRM_DIR=/home/ec2-user/.orangehrm
-export SCRIPT_DIR="${OHRM_DIR}/scripts"
-export HELPER_DIR="${SCRIPT_DIR}/helper"
-export ASSET_DIR="${OHRM_DIR}/assets"
-export LOG_DIR="${OHRM_DIR}/logs"
+export SCRIPT_DIR="$OHRM_DIR/scripts"
+export HELPER_SCRIPTS_DIR="$SCRIPT_DIR/helper_scripts"
+export BACKUP_SCRIPTS_DIR="$SCRIPT_DIR/backup_scripts"
+export ASSET_DIR="$OHRM_DIR/assets"
+export LOG_DIR="$OHRM_DIR/logs"
+export BACKUP_DIR="$OHRM_DIR/backups"
 
-export RED="\e[1;31m"
-export GREEN="\e[1;32m"
-export YELLOW="\e[1;33m"
-export ENDCOLOR="\e[0m"
-export WIP_ICON="🚧"
-export SUCCESS_ICON="✅"
-export ERROR_ICON="🔴"
+exec 3>&1 1>>"$LOG_DIR/orangehrm.log" 2>&1
+set -x
+
+# Exporting colours
+#   RC = red colour + bold
+#   GC = green colour + bold
+#   YC = yellow colour + bold
+#   EC = end colour (return to default)
+# Usage in printf
+#   printf "%bThis text is green colour%b" "$GC" "$EC"
+export RC="\e[1;31m"
+export GC="\e[1;32m"
+export YC="\e[1;33m"
+export EC="\e[0m"
 
 export YES_REGEX="^y(e|es)?$"
 export NO_REGEX="^n(o)?$"
 
 check_installed() {
-    if ! [[ -f "${OHRM_DIR}/.installed" ]]; then
+    if ! [[ -f "$OHRM_DIR/.installed" ]]; then
         ohrm_script status
         exit 1
     fi
 }
+
+# Print a progress message
+# First argument will be the message - less than 50 characters
+# Second argument should be the icon
+#   "error" = 🔴
+#   "wip" = 🚧
+#   "success" = ✅
+# A newline (\n) will be printed at the end of the message
+# The third argument should be equal to "rewrite" or kept blank
+# This argument will overwrite the previous message using tput cuu1
+# shellcheck disable=SC2317
+print_progress_message() {
+    local dots
+    local icon
+    local colour
+    dots=".................................................."
+
+    if [[ $2 = "error" ]]; then
+        icon="🔴"
+        colour=$RC
+    elif [[ $2 = "wip" ]]; then
+        icon="🚧"
+        colour=$YC
+    elif [[ $2 = "success" ]]; then
+        icon="✅"
+        colour=$GC
+    fi
+
+    if [[ -n $3 && $3 = "rewrite" ]]; then
+        tput cuu1 >&3
+    fi
+
+    printf "%b%.50s%b%s\n" "$colour" "$1$dots" "$EC" "$icon" >&3
+}
+
+# Function to check whether the user's input is yes or no
+# Provide the input as the first argument
+# shellcheck disable=SC2317
+yes_no_check() {
+    if [[ $1 =~ $YES_REGEX ]] || [[ $1 =~ $NO_REGEX ]]; then
+        return 0
+    fi
+    return 1
+}
+
+# Function to exit the script based on the user's input
+# Provide the quit condition value as the first argument
+#   e.g. If input should quit on "no", first argument should be "no"
+# Provide the user's input as the second argument
+# Provide a message that should be printed as the third argument
+# shellcheck disable=SC2317
+quit_if_input() {
+    if [[ "$2" =~ $1 ]]; then
+        printf "%b\n" "$3" >&3
+        exit 0
+    fi
+}
+
+export -f print_progress_message
+export -f yes_no_check
+export -f quit_if_input
 
 # Function to run scripts.
 # Give the name of the script as the first argument
@@ -31,17 +101,17 @@ ohrm_script() {
     if [[ $2 = "check" ]]; then
         check_installed
     fi
-    sh "${SCRIPT_DIR}/${1}"
+    sh "$SCRIPT_DIR/$1" >&3
 }
 
 cleanup() {
     unset OHRM_DIR
     unset SCRIPT_DIR
     unset ASSET_DIR
-    unset RED
-    unset GREEN
-    unset YELLOW
-    unset ENDCOLOR
+    unset RC
+    unset GC
+    unset YC
+    unset EC
     unset WIP_ICON
     unset SUCCESS_ICON
     unset ERROR_ICON
@@ -49,26 +119,15 @@ cleanup() {
     unset NO_REGEX
 }
 
+# Pass the name of the log file as the first argument
 # shellcheck disable=SC2317
 err_exit() {
-    echo -e "\n${RED}Something has gone wrong!${ENDCOLOR}"
-    cp -r "${LOG_DIR}" "${HOME}/orangehrm_command_logs"
-    echo -e "Please find the relevant logs files at ${GREEN}${HOME}/orangehrm_command_logs\n${ENDCOLOR}"
+    printf "\n%bSomething has gone wrong!%b\n" "$RC" "$EC" >&3
+    cp -rf "$LOG_DIR/$1" "$HOME"
+    printf "Please find the relevant long files at %b%s%b\n\n" "$GC" "$HOME/$1" "$EC" >&3
     cleanup
     exit 1
 }
-
-# shellcheck disable=SC2317
-install_err_exit() {
-    echo -e "\n${RED}Something has gone wrong!${ENDCOLOR}"
-    cp -rf "${LOG_DIR}" "${HOME}"
-    echo -e "Please find the relevant logs files at ${GREEN}${HOME}/logs\n${ENDCOLOR}"
-    echo -e "Please run ${GREEN}orangehrm clean${ENDCOLOR} and try installing again"
-    cleanup
-    exit 1
-}
-
-trap err_exit ERR
 
 # Create log dir
 if ! [[ -d "${LOG_DIR}" ]]; then
@@ -80,19 +139,26 @@ if [[ $# -eq 0 ]]; then
     ohrm_script help
 else
     case $1 in
+        help)
+            ohrm_script help
+            ;;
         install)
-            trap install_err_exit ERR
+            trap 'err_exit orangehrm_install.log' ERR
             ohrm_script install
             ;;
         update)
             ohrm_script update check
             ;;
+        check-update)
+            ohrm_script check_update check
+            ;;            
         backup)
-            ohrm_script backup check
-            ;;
-        restore)
-            # Add option to disable check
-            ohrm_script restore check
+            check_installed
+            if [[ -n $2 ]]; then
+                sh "$SCRIPT_DIR/backup" "$2" >&3
+            else
+                sh "$SCRIPT_DIR/backup" >&3
+            fi
             ;;
         clean)
             ohrm_script clean
@@ -100,18 +166,12 @@ else
         status)
             ohrm_script status
             ;;
-        check-update)
-            ohrm_script check_update check
-            ;;
         get-logs)
             ohrm_script get_logs check
             ;;
-        help)
-            ohrm_script help
-            ;;
         *)
-            echo -e "\n${RED}${1}${ENDCOLOR} is not an orangehrm command"
-            echo -e "See '${GREEN}orangehrm help${ENDCOLOR}'\n" 
+            printf "\n%b%s%b is not an orangehrm command\n" "$RC" "$1" "$EC" >&3
+            printf "See '%borangehrm help%b'\n\n" "$GC" "$EC" >&3
             ;;
     esac
 fi

@@ -1,34 +1,47 @@
 #!/bin/bash
 
-answer="no"
+exec 3>&1 1>>"$LOG_DIR/orangehrm_clean.log" 2>&1
+set -x
+set -e
 
-echo -e "\nThis command will completely wipe all OrangeHRM containers and data!"
-echo -e "Are you sure you want to continue? ${YELLOW}[yes/no]${ENDCOLOR}"
-
-read -rp "> " answer
-
-while ! [[ $answer =~ $YES_REGEX|$NO_REGEX ]]; do
-    echo "Please enter yes or no"
-    read -rp "> " answer
-done
-
-if [[ $answer =~ $NO_REGEX ]]; then
-    echo -e "Quitting..\n"
-    exit 0
+if [[ -z  $OHRM_DIR ]]; then
+    printf "\nPlease run this script from the OrangeHRM command\n" >&3
+    printf "i.e. orangehrm clean\n\n" >&3
+    exit 1;
 fi
 
-echo -e "\n${YELLOW}Wiping OrangeHRM data${ENDCOLOR}.............${WIP_ICON}"
+answer="no"
 
-# if [[ $(docker inspect -f '{{.State.Running}}' mariadb 2>/dev/null) = "true" ]]; then
-#     docker exec mariadb mariadb -proot -e "drop database if exists orangehrm"
-# fi
-docker compose --file "${OHRM_DIR}/compose.yml" down &>/dev/null
-docker system prune --all --force &>/dev/null
-docker volume rm orangehrm_orangehrm-data &>/dev/null
+printf "\n%bWARNING%b: You are about to completely remove all data and backups related to your installation of OrangeHRM!\n\n" "$RC" "$EC" >&3
+printf "Are you sure you want to continue? [%byes/no%b]\n" "$YC" "$EC" >&3
+
+read -rp "> " answer 2>&3
+
+while ! yes_no_check "$answer"; do
+    printf "Please enter yes or no\n" >&3
+    read -rp "> " answer 2>&3
+done
+
+quit_if_input "$NO_REGEX" "$answer" "\nCleaning process aborted!\n\n"
+
+printf "\n" >&3
+
+print_progress_message "Wiping OrangeHRM data" wip
+
+docker compose --file ".orangehrm/compose.yml" down
+docker system prune --all --force
+if docker volume inspect orangehrm_orangehrm-data; then
+    docker volume rm orangehrm_orangehrm-data
+fi
+
 rm --force "${OHRM_DIR}/.installed"
+print_progress_message "Wiping OrangeHRM data" success rewrite
+
+print_progress_message "Removing backups" wip
 rm --recursive --force "${OHRM_DIR}/backups/*"
+print_progress_message "Removing backups" success rewrite
 
-tput cuu1
-echo -e "${GREEN}Wiping OrangeHRM data${ENDCOLOR}.............${SUCCESS_ICON}\n"
 
+printf "\nAll data related to orangehrm has been wiped!\n\n" >&3
+printf "To reinstall the system please run '%borangehrm install%b'\n\n" "$GC" "$EC" >&3
 exit 0

@@ -1,0 +1,58 @@
+#!/bin/bash
+
+exec 3>&1 1>>"$LOG_DIR/orangehrm_backup_create.log" 2>&1
+set -x
+set -e
+
+if [[ -z  $OHRM_DIR ]]; then
+    printf "\nPlease run this script from the OrangeHRM command\n" >&3
+    printf "i.e. orangehrm backup create\n\n" >&3
+    exit 1;
+fi
+
+dateOfBck=$(date +"%Y/%m/%d")
+timeOfBck=$(date +"%H:%M:%S")
+
+printf "\nA backup of your database, configuration file and compose file will be created\n\n" >&3
+print_progress_message "Creating Backup" wip
+
+# shellcheck source=../../.env
+source "${OHRM_DIR}/.env"
+# shellcheck source=../../.installed
+source "${OHRM_DIR}/.installed"
+
+backupDir="${OHRM_DIR}/backups/ohrm_${OHRM_VERSION}_${dateOfBck//\//}_${timeOfBck//:/}"
+mkdir -p "${backupDir}"
+
+# Dump OrangeHRM database
+docker exec mariadb sh -c "exec mariadb-dump --all-databases -uroot -p${MARIADB_ROOT_PW}" > "${backupDir}/mariadb.sql"
+
+# Copy compose.yml
+cp "${OHRM_DIR}/compose.yml" "${backupDir}/compose.yml"
+# Copy .installed file - to check version
+cp "${OHRM_DIR}/.installed" "${backupDir}/.installed"
+
+confDir="/var/www/html/lib/confs"
+# Copy configuration file
+docker cp "orangehrm:${confDir}/Conf.php" "${backupDir}/Conf.php" --quiet
+# Copy cryptokey if exists - condition will fail if find does not locate key
+if docker exec orangehrm find "${confDir}/cryptokeys/key.ohrm"; then
+    docker cp "orangehrm:${confDir}/cryptokeys/key.ohrm" "${backupDir}/key.ohrm" --quiet
+fi
+
+pushd "${backupDir}"
+# --remove-files is an option for GNU tar
+tar -c ./* ./.[!.]* -f backup.tar --remove-files
+popd
+
+{
+    printf "BACKUP_VERSION=%s\n" "${OHRM_VERSION}"
+    printf "DATE_OF_BACKUP=%s\n" "${dateOfBck}"
+    printf "TIME_OF_BACKUP=%s" "${timeOfBck}"
+} > "${backupDir}/.metadata"
+
+print_progress_message "Creating Backup" success rewrite
+
+printf "Backup of OrangeHRM %s created at %s.tar\n\n" "$OHRM_VERSION" "$backupDir" >&3
+
+exit 0

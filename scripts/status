@@ -1,18 +1,20 @@
 #!/bin/bash
 
 if [[ -z  $OHRM_DIR ]]; then
-    printf "\nPlease run the script from the OrangeHRM command\n\n"
+    printf "\nPlease run this script from the OrangeHRM command\n"
+    printf "i.e. orangehrm status\n\n"
     exit 1;
 fi
 
 installFile="${OHRM_DIR}/.installed"
 
-if [[ -f "${installFile}" ]]
-then
-    # shellcheck disable=SC1090,SC1091
+if [[ -f "${installFile}" ]]; then
+    # shellcheck source=../.installed
     source "${installFile}"
-    echo -e "\n${GREEN}OrangeHRM ${OHRM_VERSION} is installed!${ENDCOLOR}\n"
+    printf "\n%bOrangeHRM %s is installed%b\n\n" "$GC" "$OHRM_VERSION" "$EC"
 else
-    echo -e "\n${YELLOW}OrangeHRM is not installed!${ENDCOLOR}"
-    echo -e "Run '${GREEN}orangehrm install${ENDCOLOR}' to start the installation\n"
+    printf "\n%bOrangeHRM is not installed%b\n" "$YC" "$EC"
+    printf "Run '%borangehrm install%b' to start the installation\n\n" "$GC" "$EC"
 fi
+
+exit 0

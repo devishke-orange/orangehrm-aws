@@ -1,14 +1,28 @@
 #!/bin/bash
 
+colours=false
+
+if [[ "$(tput colors)" -ge 256 ]]; then
+    colours=true
+fi
+
 tput bold
 
-echo -e "\n"
+if [[ $colours = true ]]; then
+    tput setaf 2
+fi
+
+printf "\n\n"
 
 echo "                     ****."
 echo "              ***********"
 echo "             ***, *****,"
 echo "            *  ******,"
 echo "                .(."
+
+if [[ $colours = true ]]; then
+    tput setaf 208
+fi
 
 echo "    (((((((((       ((((."
 echo "  ((((        ((       (((*"
@@ -20,6 +34,6 @@ echo "   (((((((/        ((((((("
 echo "     ,((((((((((((((((("
 echo "          ((((((((("
 
-echo -e "\n"
+printf "\n\n"
 
 tput sgr0

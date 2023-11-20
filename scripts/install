@@ -1,14 +1,17 @@
 #!/bin/bash
 
+exec 3>&1 1>>"$LOG_DIR/orangehrm_install.log" 2>&1
+set -x
 set -e
 
 if [[ -z  $OHRM_DIR ]]; then
-    echo -e "\nPlease run the script from the OrangeHRM command\n"
-    exit 0
+    printf "\nPlease run this script from the OrangeHRM command\n" >&3
+    printf "i.e. orangehrm install\n\n" >&3
+    exit 1;
 fi
 
-if [[ -f "${OHRM_DIR}/.installed" ]]; then
-	echo -e "${GREEN}OrangeHRM is already installed!${ENDCOLOR}"
+if [[ -f "$OHRM_DIR/.installed" ]]; then
+	printf "\n%bOrangeHRM is already installed%b\n\n" "$GC" "$EC" >&3
 	exit 0
 fi
 
@@ -31,94 +34,58 @@ usernameRegex="^[A-Za-z]{5,40}$"
 passwordRegex="^.{8,64}$"
 
 # shellcheck disable=SC1091
-source "${HELPER_DIR}/countries"
-
-logFile="${LOG_DIR}/orangehrm_install.log"
-
-write_to_log() {
-	echo "[$(date)]: $1" >> "${logFile}"
-}
+source "$HELPER_SCRIPTS_DIR/countries"
 
 check_prereq () {
-	write_to_log "Starting pre-requisite check"
 
-	echo -e "${YELLOW}Checking pre-requisites${ENDCOLOR}...........${WIP_ICON}"
+	print_progress_message "Checking pre-requisites" wip
 
 	# Check if docker is installed
 	if ! [[ $(command -v docker) ]]; then
-		write_to_log "Docker not installed"
-		tput cuu1
-		echo -e "${RED}Checking pre-requisites${ENDCOLOR}...........${ERROR_ICON}"
-		echo -e "Docker is not installed! Please install docker and try again"
+		print_progress_message "Checking pre-requisites" error rewrite
+		printf "\nDocker is not installed!\n\n" >&3
 		exit 0
 	fi
 
 	# Check if the docker service is active
-	if [[ $(sudo systemctl is-active docker) = "inactive" ]]
-	then
-		write_to_log "Docker is not active"
-		tput cuu1
-		echo -e "${RED}Checking pre-requisites${ENDCOLOR}...........${ERROR_ICON}"
-		echo -e "Docker is not active!"
-		echo -e "Please activate docker using 'sudo systemctl start docker' and retry the installation"
-		echo -e "If you want docker to start on boot you can run 'sudo systemctl enable docker' as well"
+	if [[ $(sudo systemctl is-active docker) = "inactive" ]]; then
+		print_progress_message "Checking pre-requisites" error rewrite
+		printf "\nDocker is not active!\n" >&3
+		printf "Please activate docker using 'sudo systemctl start docker' and retry the installation\n" >&3
+		printf "If you want docker to start on boot you can run 'sudo systemctl enable docker' as well\n\n" >&3
 		exit 0
 	fi
 
 	# Check if docker compose is installed
 	if docker compose version 2>&1 | grep -q "docker: 'compose' is not a docker command"; then
-		write_to_log "Docker compose is not installed"
-		tput cuu1
-		echo -e "${RED}Checking pre-requisites${ENDCOLOR}...........${ERROR_ICON}"
-		echo -e "Docker Compose is not installed! Please install docker compose and try again!"
+		print_progress_message "Checking pre-requisites" error rewrite
+		printf "\nDocker Compose is not installed!\n\n" >&3
 		exit 0
 	fi
 
 	if ! [[ $(command -v pwgen) ]]; then
-		write_to_log "pwgen not installed"
-		tput cuu1
-		echo -e "${RED}Checking pre-requisites${ENDCOLOR}...........${ERROR_ICON}"
-		echo -e "pwgen is not installed! Please install pwgen and try again"
+		print_progress_message "Checking pre-requisites" error rewrite
+		printf "\npwgen is not installed!\n\n" >&3
 		exit 0
 	fi
 
-	tput cuu1
-	echo -e "${GREEN}Checking pre-requisites${ENDCOLOR}...........${SUCCESS_ICON}\n"
-
-	write_to_log "Pre-requisite check successfull"
+	print_progress_message "Checking pre-requisites" success rewrite
 }
 
 early_exit () {
-	write_to_log "Early exit"
-	echo -e "\n\n${RED}Quitting the installation..${ENDCOLOR}"
-	echo -e "${YELLOW}Cleaning install files${ENDCOLOR}............${WIP_ICON}"
+	printf "\n%bQuitting the intstallation%b\n" "$RC" "$EC" >&3
+	print_progress_message "Cleaning install files" wip
 
-	write_to_log "Checking MariaDB container status"
-	# Check if MariaDB container is running
-	if [[ $(docker inspect -f '{{.State.Running}}' mariadb &>>"${logFile}") = "true" ]]
-	then
-		# Silently drop the orangehrm database
-		docker exec mariadb mariadb -proot -e "drop database if exists orangehrm" &>>"${logFile}"
-	fi
-
-	write_to_log "Downing containers"
-	docker compose -f "${OHRM_DIR}/compose.yml" down &>>"${logFile}"
-	write_to_log "Running docker system prune"
-	docker system prune --all --force &>>"${logFile}"
+	docker compose --file ".orangehrm/compose.yml" down
+	docker system prune --all --force
+	if docker volume inspect orangehrm_orangehrm-data; then
+		docker volume rm orangehrm_orangehrm-data
+	fi	
 	
-	tput cuu1
-	echo -e "${GREEN}Cleaning install files${ENDCOLOR}............${SUCCESS_ICON}"
-	echo -e "You can run \"${GREEN}orangehrm install${ENDCOLOR}\" to restart the installation${ENDCOLOR}\n"
+	print_progress_message "Cleaning install files" success rewrite
+	printf "\nYou can run '%borangehrm install%b' to restart the installation\n\n" "$GC" "$EC" >&3
 
-	write_to_log "Exiting installer"
 	exit 0
-}
-
-yes_no_check() {
-	while ! [[ $answer =~ $YES_REGEX|$NO_REGEX ]]; do
-		echo "Please enter yes or no"
-		read -rp "> " answer
-	done
 }
 
 reset_answer() {
@@ -126,145 +93,160 @@ reset_answer() {
 }
 
 show_start_message() {
-	write_to_log "Starting installer"
-	sh "${HELPER_DIR}/logo"
-	echo -e "\n${GREEN}Starting the OrangeHRM Installation${ENDCOLOR}\n"
+	# Enabling 256 color support to print logo with color
+	TERM=xterm-256color
+	sh "$HELPER_SCRIPTS_DIR/logo" >&3
+	printf "\n%bStarting the OrangeHRM installation%b\n\n" "$GC" "$EC" >&3
+}
+
+# Provide the error message as the first argument
+print_installer_input_error() {
+	printf "%b%s%b\n" "$RC" "$1" "$EC" >&3
+}
+
+# Provide the prompt as the first argument
+# Provde the hint as the second argument
+# It will be printed as => "message [hint]\n"
+print_installer_input_prompt() {
+	printf "%b [%b%s%b]\n" "$1" "$YC" "$2" "$EC" >&3
 }
 
 get_license_agreement() {
-	echo -ne "Please read and agree to the following license ${YELLOW}[press enter]${ENDCOLOR}"
+	print_installer_input_prompt "Please read and agree to the following license" "press enter"
 	read -r
-	tput cuu1
-	tput el
-	less -P "Press ENTER to read more, press q to quit" /home/ec2-user/.orangehrm/assets/license.txt
-	echo -e "Do you agree to the license? ${YELLOW}[yes/no]${ENDCOLOR}"
-	read -rp "> " answer
-	yes_no_check
-	if [[ $answer =~ $NO_REGEX ]]
-	then
+	tput cuu1 >&3
+	tput el >&3
+	less -P "Press ENTER to read more, press q to quit" /home/ec2-user/.orangehrm/assets/license.txt >&3
+	print_installer_input_prompt "Do you agree to the license" "yes/no"
+	read -rp "> " answer 2>&3
+	
+	while ! yes_no_check "$answer"; do
+		printf "Please enter yes or no\n" >&3
+		read -rp "> " answer 2>&3
+	done
+
+	if [[ $answer =~ $NO_REGEX ]]; then
 		early_exit
 	fi
+
 	reset_answer
 }
 
 get_first_name() {
-	echo -e "Enter the admin employee's first name ${YELLOW}[required]${ENDCOLOR}"
-	read -rp "> " firstName
-	while ! [[ $firstName =~ $nameRegex ]]
-	do
-		echo -e "${RED}Enter a valid name!${ENDCOLOR}"
-		read -rp "> " firstName
+	print_installer_input_prompt "Enter the admin employee's first name" "required"
+	read -rp "> " firstName 2>&3
+	while ! [[ $firstName =~ $nameRegex ]]; do
+		print_installer_input_error "Enter a valid name!"
+		read -rp "> " firstName 2>&3
 	done
 }
 
 get_last_name() {
-	echo -e "Enter the admin employee's last name ${YELLOW}[required]${ENDCOLOR}"
-	read -rp "> " lastName
-	while ! [[ $lastName =~ $nameRegex  ]]
-	do
-		echo -e "${RED}Enter a valid name!${ENDCOLOR}"
-		read -rp "> " lastName
+	print_installer_input_prompt "Enter the admin employee's last name" "required"
+	read -rp "> " lastName 2>&3
+	while ! [[ $lastName =~ $nameRegex  ]]; do
+		print_installer_input_error "Enter a valid name"
+		read -rp "> " lastName 2>&3
 	done
 }
 
 get_email() {
-	echo -e "Enter the admin employee's email ${YELLOW}[required]${ENDCOLOR}"
-	read -rp "> " email
-	while ! [[ $email =~ $emailRegex  ]]
-	do
-		echo -e "${RED}Enter a valid email!${ENDCOLOR}"
-		read -rp "> " email
+	print_installer_input_prompt "Enter the admin employee's email" "required"
+	read -rp "> " email 2>&3
+	while ! [[ $email =~ $emailRegex  ]]; do
+		print_installer_input_error "Enter a valid email!"
+		read -rp "> " email 2>&3
 	done
 }
 
 get_org_name() {
-	echo -e "Enter the name of your organization ${YELLOW}[required]${ENDCOLOR}"
-	read -rp "> " orgName
-	while ! [[ $orgName =~ $orgNameRegex ]]
-	do
-		echo -e "${RED}Enter a valid name!${ENDCOLOR}"
-		read -rp "> " orgName
+	print_installer_input_prompt "Enter the name of your organization" "required"
+	read -rp "> " orgName 2>&3
+	while ! [[ $orgName =~ $orgNameRegex ]]; do
+		print_installer_input_error "Enter a valid name!"
+		read -rp "> " orgName 2>&3
 	done
 }
 
 # shellcheck disable=SC2154
 list_countries() {
 	for code in "${!countries[@]}"; do 
-		echo "${code}: ${countries[$code]}"
+		printf "%s: %s\n" "$code" "${countries[$code]}" >&3
 	done
 }
 
 # shellcheck disable=SC1091,SC2154,SC2001
 get_country_code() {
 	local countryDir
-	countryDir="${OHRM_DIR}/.countries"
+	countryDir="$OHRM_DIR/.countries"
 	
-	if [[ -d "${countryDir}" ]]; then
-		rm -rf "${countryDir}"
+	if [[ -d "$countryDir" ]]; then
+		rm -rf "$countryDir"
 	fi
 
-	write_to_log "Creating country directory"
-	mkdir -p "${countryDir}"
-	pushd "${countryDir}" &>>"${logFile}"
+	mkdir -p "$countryDir"
+	pushd "$countryDir"
 	for code in "${!countries[@]}"; do 
-		touch "${code}"	
+		touch "$code"	
 	done
 
-	echo -e "Enter the your country code ${YELLOW}[use TAB for suggestions, type 'list' to view codes]${ENDCOLOR}"
+	print_installer_input_prompt "Enter your country code" "use TAB for suggestions, type 'list' to view codes"
 	while true; do
-		read -e -r -p "> " country
+		read -e -r -p "> " country 2>&3
 		# Don't store country in log
-		if [[ -n "${country}" ]] && find "${countryDir}/${country}" &>/dev/null; then
+		if [[ -n "$country" ]] && find "$countryDir/$country"; then
 			break
 		elif [[ $country = "list" ]]; then
 			list_countries
 		else
-			echo -e "${RED}Please enter a valid country code!${ENDCOLOR}!"
+			print_installer_input_error "Please enter a valid country code!"
 		fi
 	done
 
-	write_to_log "Removing country directory"
-	echo -e "Selected country: ${countries[$country]}"
+	printf "Selected country: %s\n" "${countries[$country]}" >&3
 
-	popd &>>"${logFile}"
-	rm -rf "${countryDir}"
+	popd
+	rm -rf "$countryDir"
 }
 
 get_username() {
-	echo -e "Enter the admin username (between 5-40 characters) ${YELLOW}[required]${ENDCOLOR}"
-	read -rp "> " username
-	while ! [[ $username =~ $usernameRegex ]]
-	do
-		echo -e "${RED}Enter a valid username!${ENDCOLOR}"
-		read -rp "> " username
+	print_installer_input_prompt "Enter the admin username" "between 5-40 characters"
+	read -rp "> " username 2>&3
+	while ! [[ $username =~ $usernameRegex ]]; do
+		print_installer_input_error "Enter a valid username!"
+		read -rp "> " username 2>&3
 	done
 }
 
 get_password() {
-	echo -e "Enter the admin password (between 8 to 64 characters) ${YELLOW}[hidden]${ENDCOLOR}"
-	read -s -rp "> " password
-	while ! [[ $password =~ $passwordRegex ]]
-	do
-		echo -e "\n${RED}Enter a valid password!${ENDCOLOR}"
-		read -s -rp "> " password
+	print_installer_input_prompt "Enter the admin password" "between 8-64 characters"
+	read -s -rp "> " password 2>&3
+	printf "\n" >&3
+	while ! [[ $password =~ $passwordRegex ]]; do
+		print_installer_input_error "Enter a valid password"
+		read -s -rp "> " password 2>&3
+		printf "\n" >&3
 	done
-	echo -e "\nRe-enter the admin password ${YELLOW}[hidden]${ENDCOLOR}"
-	read -s -rp "> " password2
+	print_installer_input_prompt "Re-enter the admin password" "hidden"
+	read -s -rp "> " password2 2>&3
+	printf "\n" >&3
 }
 
 password_compare() {
-	while [[ $password != "${password2}" ]]; do
-		echo -e "\n${RED}The passwords were not the same!${ENDCOLOR}"
+	while [[ $password != "$password2" ]]; do
+		print_installer_input_error "The passwords were not the same!"
 		get_password
 	done
 }
 
 get_encrypt() {
-	echo -e "\nDo you want to enable data encryption? ${YELLOW}[yes/no]${ENDCOLOR}"
-	read -rp "> " answer
-	yes_no_check
-	if [[ $answer =~ $YES_REGEX ]]
-	then
+	print_installer_input_prompt "Do you want to enable data encryption?" "yes/no"
+	read -rp "> " answer 2>&3
+	while ! yes_no_check "$answer"; do
+		print_installer_input_error "Please enter yes or no"
+		read -rp "> " answer 2>&3
+	done
+	if [[ $answer =~ $YES_REGEX ]]; then
 		encryptOption="y"
 	else
 		encryptOption="n"
@@ -272,20 +254,25 @@ get_encrypt() {
 	reset_answer
 }
 
+# Provide field name as first argument
+# Provide field value as second argument
+print_config_line() {
+	printf "%b%-20s%b %s\n" "$GC" "$1:" "$EC" "$2" >&3
+}
+
 show_config() {
-	echo "==============================="
-	echo -e "${GREEN}First Name${ENDCOLOR}: 	    $firstName"
-	echo -e "${GREEN}Last Name${ENDCOLOR}: 	    $lastName"
-	echo -e "${GREEN}Work Email${ENDCOLOR}: 	    $email"
-	echo -e "${GREEN}Org Name${ENDCOLOR}: 	    $orgName"
-	echo -e "${GREEN}Country${ENDCOLOR}:	    ${countries[$country]}"
-	echo -e "${GREEN}Username${ENDCOLOR}: 	    $username"
-	echo -e "${GREEN}Data Encryption${ENDCOLOR}:    $encryptOption"
-	echo "==============================="
+	printf "===============================\n" >&3
+	print_config_line "First Name" "$firstName"
+	print_config_line "Last Name" "$lastName"
+	print_config_line "Work Email" "$email"
+	print_config_line "Org Name" "$orgName"
+	print_config_line "Country" "${countries[$country]}"
+	print_config_line "Username" "$username"
+	print_config_line "Data Encryption" "$encryptOption"
+	printf "===============================\n" >&3
 }
 
 get_config_values() {
-	write_to_log "Getting config values"
 	local fields
 	fields=("First Name" "Last Name" "Work Email" "Org Name" "Country" "Username" "Password" "Data Encryption")
 
@@ -299,56 +286,68 @@ get_config_values() {
 	password_compare
 	get_encrypt
 
-	echo -e "\nPlease confirm the following"
+	printf "\nPlease confirm the following\n" >&3
 	show_config
-	echo -e "\nAre these details correct? ${YELLOW}[yes/no]${ENDCOLOR}"
-	read -rp "> " answer
-	yes_no_check
+	print_installer_input_prompt "Are these details correct?" "yes/no"
+	read -rp "> " answer 2>&3
+	
+	while ! yes_no_check "$answer"; do
+		print_installer_input_error "Please enter yes or no"
+	done
+
 	if [[ $answer =~ $NO_REGEX ]]; then
-		echo -e "\nPlease choose a field to edit (or select quit)"
-		select field in "${fields[@]}" "quit"; do
+		for index in "${!fields[@]}"; do
+			printf "%d %s\n" "$((index+1))" "${fields[index]}" >&3
+		done
+
+		printf "\nPlease choose a field to edit (or type 0 to continue)\n" >&3
+		read -rp "> " field 2>&3
+		
+		while true; do
 			case $field in
-				quit)
-					break;
+				0)
+					break
 					;;
-				"First Name")
-					echo "Current Value: ${firstName}"
+				1)
+					printf "Current Value: %s\n" "$firstName" >&3
 					get_first_name
 					;;
-				"Last Name")
-					echo "Current Value: ${lastName}"
+				2)
+					printf "Current Value: %s\n" "$lastName" >&3
 					get_last_name
 					;;
-				"Work Email")
-					echo "Current Value: ${email}"
+				3)
+					printf "Current Value: %s\n" "$email" >&3
 					get_email
 					;;
-				"Org Name")
-					echo "Current Value: ${orgName}"
+				4)
+					printf "Current Value: %s\n" "$orgName" >&3
 					get_org_name
 					;;
-				"Country Code")
-					echo "Current Value: ${country}"
+				5)
+					printf "Current Value: %s\n" "$country" >&3
 					get_country_code
 					;;
-				"Username")
-					echo "Current Value: ${username}"
+				6)
+					printf "Current Value: %s\n" "$username" >&3
 					get_username
 					;;
-				"Password")
+				7)
 					get_password
 					;;
-				"Data Encryption")
+				8)
 					get_encrypt
 					;;
 				*)
-					echo "Invalid Option"
+					printf "Invalid Option\n" >&3
 					;;
 			esac
 			show_config
+			
+			printf "\nPlease choose a field to edit (or type 0 to continue)\n" >&3
+			read -rp "> " field 2>&3
 		done
 	fi
-	write_to_log "Obtained config values"
 }
 
 write_env() {
@@ -357,87 +356,76 @@ write_env() {
 	#	Capital letters
 	#	Numbers
 	#	Avoiding special characters as certain characters cause issues
-	echo "MARIADB_ROOT_PW='$(pwgen -c -n 32 1)'" > "${OHRM_DIR}/.env"
+	printf "MARIADB_ROOT_PW='%s'" "$(pwgen -c -n 32 1)" > "$OHRM_DIR/.env"
 }
 
 create_containers() {
-	write_to_log "Creating containers"
-	echo -e "\n${YELLOW}Creating the containers${ENDCOLOR}...........${WIP_ICON}"
+	print_progress_message "Creating the containers" wip
 
-	write_to_log "Creating .env"
 	write_env
 
-	write_to_log "Upping containers"
-	docker compose --env-file "${OHRM_DIR}/.env" --file "${OHRM_DIR}/compose.yml" up --detach --remove-orphans &>>"${logFile}"
+	docker compose --env-file "$OHRM_DIR/.env" --file "$OHRM_DIR/compose.yml" up --detach --remove-orphans
 	
-	write_to_log "Setting maintenance page"
-	docker cp "${ASSET_DIR}/maintenance.php" orangehrm:/var/www/html &>>"${logFile}"
+	docker cp "$ASSET_DIR/maintenance.php" orangehrm:/var/www/html
 	docker exec orangehrm mv index.php BACKUP
 	docker exec orangehrm mv maintenance.php index.php
 
-	tput cuu1
-	echo -e "${GREEN}Creating the containers${ENDCOLOR}...........${SUCCESS_ICON}"
-	write_to_log "Containers created"
+	print_progress_message "Creating the containers" success rewrite
 }
 
 update_configuration() {
-	echo -e "${YELLOW}Updating install configuration${ENDCOLOR}....${WIP_ICON}"
-	write_to_log "Updating configuration"
+	print_progress_message "Updating install configuration" wip
 
-	source "${OHRM_DIR}/.env"
+	# shellcheck source=../.env
+	source "$OHRM_DIR/.env"
 
-	docker exec orangehrm sed -i 's/hostName: 127.0.0.1/hostName: mariadb1011/' installer/cli_install_config.yaml 2>>"${logFile}"
-	docker exec orangehrm sed -i 's/databaseName: orangehrm_mysql/databaseName: orangehrm/' installer/cli_install_config.yaml 2>>"${logFile}"
+	docker exec orangehrm sed -i 's/hostName: 127.0.0.1/hostName: mariadb1011/' installer/cli_install_config.yaml
+	docker exec orangehrm sed -i 's/databaseName: orangehrm_mysql/databaseName: orangehrm/' installer/cli_install_config.yaml
 	# GNU sed allows for backslashes as delimiters. May not be compatible with other versions of sed
-	docker exec orangehrm sed -i "s\privilegedDatabasePassword: root\privilegedDatabasePassword: $MARIADB_ROOT_PW\ " installer/cli_install_config.yaml 2>>"${logFile}"
-	docker exec orangehrm sed -i "s/adminEmployeeFirstName: OrangeHRM/adminEmployeeFirstName: $firstName/" installer/cli_install_config.yaml 2>>"${logFile}"
-	docker exec orangehrm sed -i "s/adminEmployeeLastName: Admin/adminEmployeeLastName: $lastName/" installer/cli_install_config.yaml 2>>"${logFile}" 
-	docker exec orangehrm sed -i "s/adminUserName: Admin/adminUserName: $username/" installer/cli_install_config.yaml 2>>"${logFile}"
-	docker exec orangehrm sed -i "s/adminPassword: Ohrm@1423/adminPassword: $password/" installer/cli_install_config.yaml 2>>"${logFile}"
-	docker exec orangehrm sed -i "s/workEmail: admin@example.com/workEmail: $email/" installer/cli_install_config.yaml 2>>"${logFile}"
-	docker exec orangehrm sed -i "s/ name: OrangeHRM/ name: $orgName/" installer/cli_install_config.yaml 2>>"${logFile}"
-	docker exec orangehrm sed -i "s/country: US/country: $country/" installer/cli_install_config.yaml 2>>"${logFile}"
-	docker exec orangehrm sed -i "s/enableDataEncryption: n/enableDataEncryption: $encryptOption/" installer/cli_install_config.yaml 2>>"${logFile}"
-	docker exec orangehrm sed -i "s/registrationConsent: true/registrationConsent: false/" installer/cli_install_config.yaml 2>>"${logFile}"
-	
-	tput cuu1
-	echo -e "${GREEN}Updating install configuration${ENDCOLOR}....${SUCCESS_ICON}"
-	write_to_log "Configuration updated"
+	docker exec orangehrm sed -i "s\privilegedDatabasePassword: root\privilegedDatabasePassword: $MARIADB_ROOT_PW\ " installer/cli_install_config.yaml
+	docker exec orangehrm sed -i "s/adminEmployeeFirstName: OrangeHRM/adminEmployeeFirstName: $firstName/" installer/cli_install_config.yaml
+	docker exec orangehrm sed -i "s/adminEmployeeLastName: Admin/adminEmployeeLastName: $lastName/" installer/cli_install_config.yaml 
+	docker exec orangehrm sed -i "s/adminUserName: Admin/adminUserName: $username/" installer/cli_install_config.yaml
+	docker exec orangehrm sed -i "s/adminPassword: Ohrm@1423/adminPassword: $password/" installer/cli_install_config.yaml
+	docker exec orangehrm sed -i "s/workEmail: admin@example.com/workEmail: $email/" installer/cli_install_config.yaml
+	docker exec orangehrm sed -i "s/ name: OrangeHRM/ name: $orgName/" installer/cli_install_config.yaml
+	docker exec orangehrm sed -i "s/country: US/country: $country/" installer/cli_install_config.yaml
+	docker exec orangehrm sed -i "s/enableDataEncryption: n/enableDataEncryption: $encryptOption/" installer/cli_install_config.yaml
+	docker exec orangehrm sed -i "s/registrationConsent: true/registrationConsent: false/" installer/cli_install_config.yaml
+
+	print_progress_message "Updating install configuration" success rewrite
 }
 
 install_orangehrm() {
-	write_to_log "Installing system"
-	echo -e "${YELLOW}Installing OrangeHRM${ENDCOLOR}..............${WIP_ICON}"
+	print_progress_message "Installing OrangeHRM" wip
 
 	# Small period for database container to finish initializing.
 	# Installation will fail with a "Connection Refused" error without this
 	sleep 5
 
-	docker exec orangehrm php installer/cli_install.php &>>"${logFile}"
+	docker exec orangehrm php installer/cli_install.php
 
 	docker exec orangehrm rm -f index.php
 	docker exec orangehrm mv BACKUP index.php
 
-	tput cuu1
-	echo -e "${GREEN}Installing OrangeHRM${ENDCOLOR}..............${SUCCESS_ICON}"
-	write_to_log "System installed"
+	print_progress_message "Installing OrangeHRM" success rewrite
 }
 
 # TO-DO change!!
 write_install_file() {
 	local version 
 	local installFile
-	version=$(grep "    image: orangehrm/orangehrm:" "${OHRM_DIR}/compose.yml" | sed 's/    image: orangehrm\/orangehrm://')
-	installFile="${OHRM_DIR}/.installed"
+	version=$(grep "    image: orangehrm/orangehrm:" "$OHRM_DIR/compose.yml" | sed 's/    image: orangehrm\/orangehrm://')
+	installFile="$OHRM_DIR/.installed"
 
 	{
 		printf "#!/bin/bash\n\n"
 		printf "# DO NOT DELETE THIS FILE!\n"
 		printf "# This file contains information about the installed version of OrangeHRM\n\n"
-		printf "export OHRM_VERSION=%s" "${version}"
-	} > "${installFile}"
+		printf "export OHRM_VERSION=%s" "$version"
+	} > "$installFile"
 
-	echo -e "\n${GREEN}OrangeHRM ${version} is finished installing!${ENDCOLOR}"
+	printf "\n%bOrangeHRM %s is finished installing!%b\n" "$GC" "$version" "$EC" >&3
 }
 
 print_aws_ip() {
@@ -445,13 +433,13 @@ print_aws_ip() {
 	local ohrmIP
 
 	token=$(curl -s -X PUT "http://169.254.169.254/latest/api/token" -H "X-aws-ec2-metadata-token-ttl-seconds: 21600")
-	ohrmIP=$(curl -s -H "X-aws-ec2-metadata-token: ${token}" http://169.254.169.254/latest/meta-data/public-ipv4)
-	echo -e "\nVisit ${GREEN}http://${ohrmIP}${ENDCOLOR} to access your OrangeHRM system!"
+	ohrmIP=$(curl -s -H "X-aws-ec2-metadata-token: $token" http://169.254.169.254/latest/meta-data/public-ipv4)
+	printf "\nVisit %b%s%b to access your OrangeHRM system\n\n" "$GC" "http://$ohrmIP" "$EC" >&3
 }
 
 create_backup() {
-	sh "${SCRIPT_DIR}/backup"
-	echo -e "NOTE: An initial backup of your system has been created\n"
+	sh "$OHRM_DIR/orangehrm" backup create >&3
+	printf "NOTE: An inital backup of your system has been created\n\n" >&3
 }
 
 # Catch CTRL-C
