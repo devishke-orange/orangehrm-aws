@@ -38,6 +38,6 @@ jobs:
         
       - name: Create rpm package
         run: |
-          docker exec --user ec2-user rpmlint /home/ec2-user/rpmbuild/SPECS/orangehrm.spec
-          docker exec --user ec2-user rpmbuild -ba /home/ec2-user/rpmbuild/SPECS/orangehrm.spec
+          docker exec --user ec2-user AWS rpmlint /home/ec2-user/rpmbuild/SPECS/orangehrm.spec
+          docker exec --user ec2-user AWS rpmbuild -ba /home/ec2-user/rpmbuild/SPECS/orangehrm.spec
           sudo ls build/ec2-user/rpmbuild/RPMS/noarch
