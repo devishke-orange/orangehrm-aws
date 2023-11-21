@@ -43,7 +43,7 @@ upgrader_confirm()  {
 }
 
 create_backup() {
-    sh "${OHRM_DIR}/orangehrm" backup create >&3
+    orangehrm backup create >&3
 }
 
 copy_encryption_key() {

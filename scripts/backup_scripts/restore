@@ -88,7 +88,7 @@ done
 
 printf "A backup of your current system will be created before continuing\n\n" >&3
 
-sh "$OHRM_DIR/orangehrm" backup create >&3
+orangehrm backup create >&3
 
 printf "\nThe backup you selected will now be restored\n\n" >&3
 

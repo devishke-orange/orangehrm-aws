@@ -28,17 +28,17 @@ printf "\n" >&3
 
 print_progress_message "Wiping OrangeHRM data" wip
 
-docker compose --file ".orangehrm/compose.yml" down
+docker compose --file "$OHRM_DIR/compose.yml" down
 docker system prune --all --force
 if docker volume inspect orangehrm_orangehrm-data; then
     docker volume rm orangehrm_orangehrm-data
 fi
 
-rm --force "${OHRM_DIR}/.installed"
+rm --force "$OHRM_DIR/.installed"
 print_progress_message "Wiping OrangeHRM data" success rewrite
 
 print_progress_message "Removing backups" wip
-rm --recursive --force "${OHRM_DIR}/backups/*"
+rm --recursive --force "$OHRM_DIR/backups/*"
 print_progress_message "Removing backups" success rewrite
 
 

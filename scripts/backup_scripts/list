@@ -31,4 +31,4 @@ for index in "${!backups[@]}"; do
     printf "=========================================\n" >&3
 done
 
-printf "\nTo restore one of these backups, please run '%borangehrm backup restore%b'\n\n" "$GREEN" "$ENDCOLOR" >&3
+printf "\nTo restore one of these backups, please run '%borangehrm backup restore%b'\n\n" "$GC" "$EC" >&3

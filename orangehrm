@@ -1,12 +1,17 @@
 #!/bin/bash
 
-export OHRM_DIR=/home/ec2-user/.orangehrm
+export OHRM_DIR=/opt/orangehrm
 export SCRIPT_DIR="$OHRM_DIR/scripts"
 export HELPER_SCRIPTS_DIR="$SCRIPT_DIR/helper_scripts"
 export BACKUP_SCRIPTS_DIR="$SCRIPT_DIR/backup_scripts"
 export ASSET_DIR="$OHRM_DIR/assets"
 export LOG_DIR="$OHRM_DIR/logs"
 export BACKUP_DIR="$OHRM_DIR/backups"
+
+# Create log dir
+if ! [[ -d "${LOG_DIR}" ]]; then
+    mkdir -p "${LOG_DIR}"
+fi
 
 exec 3>&1 1>>"$LOG_DIR/orangehrm.log" 2>&1
 set -x
@@ -128,11 +133,6 @@ err_exit() {
     cleanup
     exit 1
 }
-
-# Create log dir
-if ! [[ -d "${LOG_DIR}" ]]; then
-    mkdir -p "${LOG_DIR}"
-fi
 
 if [[ $# -eq 0 ]]; then
     # If no arguments

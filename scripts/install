@@ -348,6 +348,8 @@ get_config_values() {
 			read -rp "> " field 2>&3
 		done
 	fi
+
+	printf "\n"
 }
 
 write_env() {
@@ -438,7 +440,8 @@ print_aws_ip() {
 }
 
 create_backup() {
-	sh "$OHRM_DIR/orangehrm" backup create >&3
+	# Silently create a backup
+	orangehrm backup create
 	printf "NOTE: An inital backup of your system has been created\n\n" >&3
 }
 

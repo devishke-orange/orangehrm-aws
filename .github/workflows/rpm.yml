@@ -1,0 +1,27 @@
+name: Build
+
+on: [ push, pull_request ]
+
+jobs:
+  build:
+
+    runs-on: ubuntu-20.04
+
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Install docker
+        run: apt install docker -y
+
+      - name: Create build dir
+        run: mkdir build
+
+      - name: Setup Amazon Linux container
+        run: |
+          docker run -dit --name AWS --mount type=bind,source=/build/,target=/home/ amazonlinux:latest
+          docker exec AWS dnf install gcc rpm-build rpm-devel rpmlint make python bash diffutils patch rpmdevtools
+          docker exec AWS adduser ec2-user
+          docker exec --user ec2-user AWS rpmdev-setuptree
+
+      - name: Test
+        run: echo "$(ls build)"
