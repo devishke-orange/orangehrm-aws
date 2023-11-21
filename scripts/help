@@ -40,5 +40,3 @@ print_help_message "    orangehrm backup clean" "Permanently delete your existin
 print_help_message "  orangehrm clean" "Permanently remove all your OrangeHRM data!\n"
 
 printf "\nFor any further concerns, you can contact us at ossupport@orangehrm.com\n\n"
-
-# echo -e "To remove the orangehrm command, delete /home/ec2-user/.orangehrm\n"

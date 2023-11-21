@@ -116,7 +116,7 @@ get_license_agreement() {
 	read -r
 	tput cuu1 >&3
 	tput el >&3
-	less -P "Press ENTER to read more, press q to quit" /home/ec2-user/.orangehrm/assets/license.txt >&3
+	less -P "Press ENTER to read more, press q to quit" "$ASSET_DIR/license.txt" >&3
 	print_installer_input_prompt "Do you agree to the license" "yes/no"
 	read -rp "> " answer 2>&3
 	
