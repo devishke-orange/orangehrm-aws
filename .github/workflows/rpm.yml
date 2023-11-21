@@ -18,6 +18,7 @@ jobs:
 
       - name: Setup Amazon Linux container
         run: |
+          echo "$(ls)"
           docker run -dit --name AWS --mount type=bind,source=/build/,target=/home/ amazonlinux:latest
           docker exec AWS dnf install gcc rpm-build rpm-devel rpmlint make python bash diffutils patch rpmdevtools
           docker exec AWS adduser ec2-user
