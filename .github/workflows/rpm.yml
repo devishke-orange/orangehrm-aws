@@ -23,5 +23,14 @@ jobs:
           docker exec AWS adduser ec2-user
           docker exec --user ec2-user AWS rpmdev-setuptree
 
-      - name: Test
-        run: echo "$(sudo ls build/ec2-user)"
+      - name: Copy files to rpmbuild
+        run: |
+          mkdir -p build/orangehrm-0.0.1
+          cp compose.yml build/orangehrm-0.0.1
+          cp oranghrm build/orangehrm-0.0.1
+          cp -r assets build/orangehrm-0.0.1
+          cp -r scripts build/orangehrm-0.0.1
+          pushd build
+          tar -cf orangehrm-0.0.1.tar.gz orangehrm-0.0.1
+          popd
+          ls build
