@@ -33,4 +33,11 @@ jobs:
           pushd build
           tar -cf orangehrm-0.0.1.tar.gz orangehrm-0.0.1
           popd
-          ls build
+          sudo mv build/orangehrm-0.0.1.tar.gz build/ec2-user/rpmbuild/SOURCES
+          sudo mv orangehrm.spec build/ec2-user/rpmbuild/SPECS
+        
+      - name: Create rpm package
+        run: |
+          docker exec --user ec2-user rpmlint /home/ec2-user/rpmbuild/SPECS/orangehrm.spec
+          docker exec --user ec2-user rpmbuild -ba /home/ec2-user/rpmbuild/SPECS/orangehrm.spec
+          sudo ls build/ec2-user/rpmbuild/RPMS/noarch
