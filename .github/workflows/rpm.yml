@@ -27,7 +27,7 @@ jobs:
         run: |
           mkdir -p build/orangehrm-0.0.1
           cp compose.yml build/orangehrm-0.0.1
-          cp oranghrm build/orangehrm-0.0.1
+          cp orangehrm build/orangehrm-0.0.1
           cp -r assets build/orangehrm-0.0.1
           cp -r scripts build/orangehrm-0.0.1
           pushd build
