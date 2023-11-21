@@ -76,7 +76,7 @@ early_exit () {
 	printf "\n%bQuitting the intstallation%b\n" "$RC" "$EC" >&3
 	print_progress_message "Cleaning install files" wip
 
-	docker compose --file ".orangehrm/compose.yml" down
+	docker compose --file "$OHRM_DIR/compose.yml" down
 	docker system prune --all --force
 	if docker volume inspect orangehrm_orangehrm-data; then
 		docker volume rm orangehrm_orangehrm-data
