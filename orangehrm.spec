@@ -35,8 +35,7 @@ chown -R ec2-user:ec2-user %{buildroot}/opt/%{name}
 
 %files
 %{_bindir}/%{name}
-%defattr(755, root, root, 700)
-%defattr(100, ec2-user, -, 000)
+%defattr(400, -, -, 400)
 
 /opt/orangehrm/assets/maintenance.php
 /opt/orangehrm/assets/license.txt
