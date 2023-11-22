@@ -66,7 +66,7 @@ stop_existing_ohrm() {
 create_new_container() {
     print_progress_message "Downloading new compose file" wip
     rm -f "$COMPOSE_FILE"
-    curl https://raw.githubusercontent.com/devishke-orange/orangehrm-aws/main/compose.yml > "${OHRM_DIR}/compose.yml"
+    curl https://raw.githubusercontent.com/devishke-orange/orangehrm-aws/main/compose.yml > "$COMPOSE_FILE"
     print_progress_message "Downloading new compose file" success rewrite
 
     print_progress_message "Starting the new container" wip
