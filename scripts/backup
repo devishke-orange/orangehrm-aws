@@ -16,6 +16,16 @@ ohrm_backup_script() {
     sh "$BACKUP_SCRIPTS_DIR/$1" >&3
 }
 
+# Pass the name of the log file as the first argument
+# shellcheck disable=SC2317
+err_exit() {
+    printf "\n%bSomething has gone wrong!%b\n" "$RC" "$EC" >&3
+    cp -rf "$LOG_DIR/$1" "$HOME"
+    printf "Please find the relevant long files at %b%s%b\n\n" "$GC" "$HOME/$1" "$EC" >&3
+    cleanup
+    exit 1
+}
+
 if [[ $# -eq 0 ]]; then
     # If no arguments
     ohrm_backup_script backup_help
@@ -25,15 +35,19 @@ else
             ohrm_backup_script backup_help
             ;;
         create)
+            trap 'err_exit orangehrm_backup_create.log' ERR
             ohrm_backup_script create
             ;;
         restore)
+            trap 'err_exit orangehrm_backup_restore.log' ERR
             ohrm_backup_script restore
             ;;
         list)
+            trap 'err_exit orangehrm_backup_list.log' ERR
             ohrm_backup_script list
             ;;
         clean)
+            trap 'err_exit orangehrm_backup_clean.log' ERR
             ohrm_backup_script clean
             ;;
         *)

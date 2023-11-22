@@ -10,7 +10,7 @@ if [[ -z  $OHRM_DIR ]]; then
     exit 1;
 fi
 
-if [[ -f "$OHRM_DIR/.installed" ]]; then
+if [[ -f "$INSTALL_FILE" ]]; then
 	printf "\n%bOrangeHRM is already installed%b\n\n" "$GC" "$EC" >&3
 	exit 0
 fi
@@ -76,7 +76,9 @@ early_exit () {
 	printf "\n%bQuitting the intstallation%b\n" "$RC" "$EC" >&3
 	print_progress_message "Cleaning install files" wip
 
-	docker compose --file "$OHRM_DIR/compose.yml" down
+	if [[ -f "$COMPOSE_FILE" ]]; then
+		docker compose --file "$COMPOSE_FILE" down
+	fi
 	docker system prune --all --force
 	if docker volume inspect orangehrm_orangehrm-data; then
 		docker volume rm orangehrm_orangehrm-data
@@ -358,7 +360,7 @@ write_env() {
 	#	Capital letters
 	#	Numbers
 	#	Avoiding special characters as certain characters cause issues
-	printf "MARIADB_ROOT_PW='%s'" "$(pwgen -c -n 32 1)" > "$OHRM_DIR/.env"
+	printf "MARIADB_ROOT_PW='%s'" "$(pwgen -c -n 32 1)" > "$ENV_FILE"
 }
 
 create_containers() {
@@ -366,7 +368,9 @@ create_containers() {
 
 	write_env
 
-	docker compose --env-file "$OHRM_DIR/.env" --file "$OHRM_DIR/compose.yml" up --detach --remove-orphans
+	cp "$OHRM_DIR/compose.yml" "$COMPOSE_FILE"
+
+	docker compose --env-file "$ENV_FILE" --file "$COMPOSE_FILE" up --detach --remove-orphans
 	
 	docker cp "$ASSET_DIR/maintenance.php" orangehrm:/var/www/html
 	docker exec orangehrm mv index.php BACKUP
@@ -378,8 +382,8 @@ create_containers() {
 update_configuration() {
 	print_progress_message "Updating install configuration" wip
 
-	# shellcheck source=../.env
-	source "$OHRM_DIR/.env"
+	# shellcheck source=/home/ec2-user/.orangehrm/.env
+	source "$ENV_FILE"
 
 	docker exec orangehrm sed -i 's/hostName: 127.0.0.1/hostName: mariadb1011/' installer/cli_install_config.yaml
 	docker exec orangehrm sed -i 's/databaseName: orangehrm_mysql/databaseName: orangehrm/' installer/cli_install_config.yaml
@@ -415,17 +419,15 @@ install_orangehrm() {
 
 # TO-DO change!!
 write_install_file() {
-	local version 
-	local installFile
-	version=$(grep "    image: orangehrm/orangehrm:" "$OHRM_DIR/compose.yml" | sed 's/    image: orangehrm\/orangehrm://')
-	installFile="$OHRM_DIR/.installed"
+	local version
+	version=$(grep "    image: orangehrm/orangehrm:" "$COMPOSE_FILE" | sed 's/    image: orangehrm\/orangehrm://')
 
 	{
 		printf "#!/bin/bash\n\n"
 		printf "# DO NOT DELETE THIS FILE!\n"
 		printf "# This file contains information about the installed version of OrangeHRM\n\n"
 		printf "export OHRM_VERSION=%s" "$version"
-	} > "$installFile"
+	} > "$INSTALL_FILE"
 
 	printf "\n%bOrangeHRM %s is finished installing!%b\n" "$GC" "$version" "$EC" >&3
 }

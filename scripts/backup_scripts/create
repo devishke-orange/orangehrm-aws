@@ -16,21 +16,21 @@ timeOfBck=$(date +"%H:%M:%S")
 printf "\nA backup of your database, configuration file and compose file will be created\n\n" >&3
 print_progress_message "Creating Backup" wip
 
-# shellcheck source=../../.env
-source "${OHRM_DIR}/.env"
-# shellcheck source=../../.installed
-source "${OHRM_DIR}/.installed"
+# shellcheck source=/home/ec2-user/.orangehrm/.env
+source "$ENV_FILE"
+# shellcheck source=/home/ec2-user/.orangehrm/.installed
+source "$INSTALL_FILE"
 
-backupDir="${OHRM_DIR}/backups/ohrm_${OHRM_VERSION}_${dateOfBck//\//}_${timeOfBck//:/}"
+backupDir="$BACKUP_DIR/ohrm_${OHRM_VERSION}_${dateOfBck//\//}_${timeOfBck//:/}"
 mkdir -p "${backupDir}"
 
 # Dump OrangeHRM database
 docker exec mariadb sh -c "exec mariadb-dump --all-databases -uroot -p${MARIADB_ROOT_PW}" > "${backupDir}/mariadb.sql"
 
 # Copy compose.yml
-cp "${OHRM_DIR}/compose.yml" "${backupDir}/compose.yml"
+cp "$COMPOSE_FILE" "${backupDir}/compose.yml"
 # Copy .installed file - to check version
-cp "${OHRM_DIR}/.installed" "${backupDir}/.installed"
+cp "$INSTALL_FILE" "${backupDir}/.installed"
 
 confDir="/var/www/html/lib/confs"
 # Copy configuration file

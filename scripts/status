@@ -6,11 +6,9 @@ if [[ -z  $OHRM_DIR ]]; then
     exit 1;
 fi
 
-installFile="${OHRM_DIR}/.installed"
-
-if [[ -f "${installFile}" ]]; then
-    # shellcheck source=../.installed
-    source "${installFile}"
+if [[ -f "$INSTALL_FILE" ]]; then
+    # shellcheck source=/home/ec2-user/.orangehrm/.installed
+    source "$INSTALL_FILE"
     printf "\n%bOrangeHRM %s is installed%b\n\n" "$GC" "$OHRM_VERSION" "$EC"
 else
     printf "\n%bOrangeHRM is not installed%b\n" "$YC" "$EC"

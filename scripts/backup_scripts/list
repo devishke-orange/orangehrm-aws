@@ -11,14 +11,14 @@ if [[ -z  $OHRM_DIR ]]; then
 fi
 
 # Check if any backups are available
-if [[ ! -d "${OHRM_DIR}/backups" || -z "$(ls -A "${OHRM_DIR}/backups")" ]]; then
+if [[ ! -d "$BACKUP_DIR" || -z "$(ls -A "$BACKUP_DIR")" ]]; then
     printf "You have not created any backups!\n\n" >&3
     exit 0
 fi
 
 printf "\nA list of your existing backups is given below:\n\n" >&3
 
-backups=("${OHRM_DIR}/backups"/*)
+backups=("$BACKUP_DIR"/*)
 
 printf "=========================================\n" >&3
 printf "No.\tVer.\tDate\t\tTime\n" >&3

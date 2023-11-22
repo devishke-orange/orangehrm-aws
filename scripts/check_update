@@ -10,8 +10,8 @@ if [[ -z  $OHRM_DIR ]]; then
     exit 1;
 fi
 
-# shellcheck disable=SC1091
-source "$OHRM_DIR/.installed"
+# shellcheck source=/home/ec2-user/.orangehrm/.installed
+source "$INSTALL_FILE"
 
 newVersion=$(curl --silent https://raw.githubusercontent.com/devishke-orange/orangehrm-aws/main/compose.yml | grep "    image: orangehrm/orangehrm:" | sed 's/    image: orangehrm\/orangehrm://')
 

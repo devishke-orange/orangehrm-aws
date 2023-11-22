@@ -12,12 +12,12 @@ fi
 
 answer=""
 newVersion=""
-upgradeDir="${OHRM_DIR}/.upgrade/$(echo $RANDOM | md5sum | head -c 10)"
+upgradeDir="${OHRM_HOME_DIR}/.upgrade/$(echo $RANDOM | md5sum | head -c 10)"
 KEY_PATH="/var/www/html/lib/confs/cryptokeys/key.ohrm"
 
 check_version() {
-    # shellcheck source=../.installed
-    source "${OHRM_DIR}/.installed"
+    # shellcheck source=/home/ec2-user/.orangehrm/.installed
+    source "$INSTALL_FILE"
 
     newVersion=$(curl --silent https://raw.githubusercontent.com/devishke-orange/orangehrm-aws/main/compose.yml | grep "    image: orangehrm/orangehrm:" | sed 's/    image: orangehrm\/orangehrm://')
 
@@ -70,7 +70,7 @@ create_new_container() {
 
     print_progress_message "Starting the new container" wip
     
-    docker compose -f "${OHRM_DIR}/compose.yml" up -d --remove-orphans
+    docker compose -f "$COMPOSE_FILE" up -d --remove-orphans
 
     sleep 2
 
@@ -88,8 +88,8 @@ create_new_container() {
 upgrade_ohrm() {
     print_progress_message "Upgrading OrangeHRM" wip
 
-    # shellcheck source=../.env
-    source "${OHRM_DIR}/.env"
+    # shellcheck source=/home/ec2-user/.orangehrm/.env
+    source "$ENV_FILE"
     
     docker exec orangehrm php installer/console upgrade:run --dbHost mariadb1011 --dbPort 3306 --dbName orangehrm --dbUser root --dbUserPassword "${MARIADB_ROOT_PW}"
     docker exec orangehrm rm -f index.php
@@ -108,7 +108,7 @@ update_install_file() {
         printf "# DO NOT DELETE THIS FILE!\n"
         printf "# This file contains information about the installed version of OrangeHRM\n\n"
         printf "export OHRM_VERSION=%s" "$newVersion"
-    } > "$OHRM_DIR/.installed"
+    } > "$INSTALL_FILE"
 }
 
 check_version

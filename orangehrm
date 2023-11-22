@@ -5,12 +5,22 @@ export SCRIPT_DIR="$OHRM_DIR/scripts"
 export HELPER_SCRIPTS_DIR="$SCRIPT_DIR/helper_scripts"
 export BACKUP_SCRIPTS_DIR="$SCRIPT_DIR/backup_scripts"
 export ASSET_DIR="$OHRM_DIR/assets"
-export LOG_DIR="$OHRM_DIR/logs"
-export BACKUP_DIR="$OHRM_DIR/backups"
+
+export OHRM_HOME_DIR="$HOME/.orangehrm"
+export COMPOSE_FILE="$OHRM_HOME_DIR/compose.yml"
+export ENV_FILE="$OHRM_HOME_DIR/.env"
+export INSTALL_FILE="$OHRM_HOME_DIR/.installed"
+export LOG_DIR="$OHRM_HOME_DIR/logs"
+export BACKUP_DIR="$OHRM_HOME_DIR/backups"
 
 # Create log dir
-if ! [[ -d "${LOG_DIR}" ]]; then
-    mkdir -p "${LOG_DIR}"
+if ! [[ -d "$LOG_DIR" ]]; then
+    mkdir -p "$LOG_DIR"
+fi
+
+# Create backup dir
+if ! [[ -d "$BACKUP_DIR" ]]; then
+    mkdir -p "$BACKUP_DIR"
 fi
 
 exec 3>&1 1>>"$LOG_DIR/orangehrm.log" 2>&1
@@ -32,7 +42,7 @@ export YES_REGEX="^y(e|es)?$"
 export NO_REGEX="^n(o)?$"
 
 check_installed() {
-    if ! [[ -f "$OHRM_DIR/.installed" ]]; then
+    if ! [[ -f "$INSTALL_FILE" ]]; then
         ohrm_script status
         exit 1
     fi
@@ -147,9 +157,11 @@ else
             ohrm_script install
             ;;
         update)
+            trap 'err_exit orangehrm_update.log' ERR
             ohrm_script update check
             ;;
         check-update)
+            trap 'err_exit orangehrm_check_update.log' ERR
             ohrm_script check_update check
             ;;            
         backup)
@@ -161,6 +173,7 @@ else
             fi
             ;;
         clean)
+            trap 'err_exit orangehrm_clean.log' ERR
             ohrm_script clean
             ;;
         status)
