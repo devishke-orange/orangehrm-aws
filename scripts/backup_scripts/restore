@@ -112,8 +112,8 @@ tar -xf backup.tar -C "$extractDir"
 print_progress_message "Extracting backup" success rewrite
 
 print_progress_message "Copying config files" wip
-cp "$extractDir/compose.yml" "$COMPOSE_FILE"
-cp "$extractDir/.installed" "$INSTALL_FILE"
+cp -f "$extractDir/compose.yml" "$COMPOSE_FILE"
+cp -f "$extractDir/.installed" "$INSTALL_FILE"
 print_progress_message "Copying config files" success rewrite
 
 
