@@ -352,7 +352,9 @@ create_containers() {
 }
 
 generate_random_user_password() {
-	password="$(pwgen -c -n 32 1)"
+	# This will generate 1 password of length 7 with no capitals or numerals
+	# When the user logs in, they will be prompted to change their password
+	password="$(pwgen -0 -A 7 1)"
 }
 
 update_configuration() {
@@ -418,10 +420,10 @@ print_login_steps() {
 	ohrmIP=$(curl -s -H "X-aws-ec2-metadata-token: $token" http://169.254.169.254/latest/meta-data/public-ipv4)
 
 	printf "You can log in to your system with the following username and password:\n" >&3
-	printf "\tUsername: %b%s%b\n" "$GC" "$username"  "$EC" >&3
-	printf "\tPassword: %b%s%b\n" "$GC" "$password" "$EC" >&3
+	printf "Username: %b%s%b\n" "$GC" "$username"  "$EC" >&3
+	printf "Password: %b%s%b\n" "$GC" "$password" "$EC" >&3
 
-	printf "Please reset your password by clicking on your profile picture and selecting \"%bChange Password%b\"\n\n" "$GC" "$EC"
+	printf "You will be prompted to change your password on first login.\n\n" >&3
 
 	printf "\nVisit %b%s%b to access your OrangeHRM system\n\n" "$GC" "http://$ohrmIP" "$EC" >&3
 }
