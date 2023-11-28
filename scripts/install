@@ -21,7 +21,6 @@ lastName=""
 email=""
 username=""
 password=""
-password2=""
 orgName=""
 country=""
 answer="no"
@@ -31,7 +30,6 @@ nameRegex="^[A-Za-z\s]{1,30}$"
 emailRegex="^[a-zA-Z0-9.!#$%&\'*+\\/=?^_\`{|}~-]+@[a-zA-Z0-9]([a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(\.[a-zA-Z0-9]([a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)+$"
 orgNameRegex="^[A-Za-z\s]{1,100}$"
 usernameRegex="^[A-Za-z]{5,40}$"
-passwordRegex="^.{8,64}$"
 
 # shellcheck disable=SC1091
 source "$HELPER_SCRIPTS_DIR/countries"
@@ -220,27 +218,6 @@ get_username() {
 	done
 }
 
-get_password() {
-	print_installer_input_prompt "Enter the admin password" "between 8-64 characters"
-	read -s -rp "> " password 2>&3
-	printf "\n" >&3
-	while ! [[ $password =~ $passwordRegex ]]; do
-		print_installer_input_error "Enter a valid password"
-		read -s -rp "> " password 2>&3
-		printf "\n" >&3
-	done
-	print_installer_input_prompt "Re-enter the admin password" "hidden"
-	read -s -rp "> " password2 2>&3
-	printf "\n" >&3
-}
-
-password_compare() {
-	while [[ $password != "$password2" ]]; do
-		print_installer_input_error "The passwords were not the same!"
-		get_password
-	done
-}
-
 get_encrypt() {
 	print_installer_input_prompt "Do you want to enable data encryption?" "yes/no"
 	read -rp "> " answer 2>&3
@@ -276,7 +253,7 @@ show_config() {
 
 get_config_values() {
 	local fields
-	fields=("First Name" "Last Name" "Work Email" "Org Name" "Country" "Username" "Password" "Data Encryption")
+	fields=("First Name" "Last Name" "Work Email" "Org Name" "Country" "Username" "Data Encryption")
 
 	get_first_name
 	get_last_name
@@ -284,8 +261,6 @@ get_config_values() {
 	get_org_name
 	get_country_code
 	get_username
-	get_password
-	password_compare
 	get_encrypt
 
 	printf "\nPlease confirm the following\n" >&3
@@ -335,9 +310,6 @@ get_config_values() {
 					get_username
 					;;
 				7)
-					get_password
-					;;
-				8)
 					get_encrypt
 					;;
 				*)
@@ -377,6 +349,10 @@ create_containers() {
 	docker exec orangehrm mv maintenance.php index.php
 
 	print_progress_message "Creating the containers" success rewrite
+}
+
+generate_random_user_password() {
+	password="$(pwgen -c -n 32 1)"
 }
 
 update_configuration() {
@@ -429,22 +405,25 @@ write_install_file() {
 		printf "export OHRM_VERSION=%s" "$version"
 	} > "$INSTALL_FILE"
 
-	printf "\n%bOrangeHRM %s is finished installing!%b\n" "$GC" "$version" "$EC" >&3
+	printf "\n%bOrangeHRM %s is finished installing!%b\n\n" "$GC" "$version" "$EC" >&3
 }
 
-print_aws_ip() {
+print_login_steps() {
+	# Get AWS Instance IP
+	# https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/instancedata-data-retrieval.html
 	local token
 	local ohrmIP
 
 	token=$(curl -s -X PUT "http://169.254.169.254/latest/api/token" -H "X-aws-ec2-metadata-token-ttl-seconds: 21600")
 	ohrmIP=$(curl -s -H "X-aws-ec2-metadata-token: $token" http://169.254.169.254/latest/meta-data/public-ipv4)
-	printf "\nVisit %b%s%b to access your OrangeHRM system\n\n" "$GC" "http://$ohrmIP" "$EC" >&3
-}
 
-create_backup() {
-	# Silently create a backup
-	orangehrm backup create
-	printf "NOTE: An inital backup of your system has been created\n\n" >&3
+	printf "You can log in to your system with the following username and password:\n"
+	printf "\tUsername: %b%s%b\n" "$GC" "$username"  "$EC"
+	printf "\tPassword: %b%s%b\n" "$GC" "$password" "$EC"
+
+	printf "Please reset your password by clicking on your profile picture and selecting \"%bChange Password%b\"\n\n" "$GC" "$EC"
+
+	printf "\nVisit %b%s%b to access your OrangeHRM system\n\n" "$GC" "http://$ohrmIP" "$EC" >&3
 }
 
 # Catch CTRL-C
@@ -455,10 +434,10 @@ check_prereq
 get_license_agreement
 get_config_values
 create_containers
+generate_random_user_password
 update_configuration
 install_orangehrm
 write_install_file
-print_aws_ip
-create_backup
+print_login_steps
 
 exit 0
