@@ -417,9 +417,9 @@ print_login_steps() {
 	token=$(curl -s -X PUT "http://169.254.169.254/latest/api/token" -H "X-aws-ec2-metadata-token-ttl-seconds: 21600")
 	ohrmIP=$(curl -s -H "X-aws-ec2-metadata-token: $token" http://169.254.169.254/latest/meta-data/public-ipv4)
 
-	printf "You can log in to your system with the following username and password:\n"
-	printf "\tUsername: %b%s%b\n" "$GC" "$username"  "$EC"
-	printf "\tPassword: %b%s%b\n" "$GC" "$password" "$EC"
+	printf "You can log in to your system with the following username and password:\n" >&3
+	printf "\tUsername: %b%s%b\n" "$GC" "$username"  "$EC" >&3
+	printf "\tPassword: %b%s%b\n" "$GC" "$password" "$EC" >&3
 
 	printf "Please reset your password by clicking on your profile picture and selecting \"%bChange Password%b\"\n\n" "$GC" "$EC"
 
