@@ -38,19 +38,19 @@ run_taurus_with_savepoint() {
 
 run_test_suite() {
     if [[ $2 = "savepoint" ]]; then
+        run_taurus_with_savepoint "$1" 1 
         run_taurus_with_savepoint "$1" 2 
-        # run_taurus_with_savepoint $1 5 
-        # run_taurus_with_savepoint $1 10 
-        # run_taurus_with_savepoint $1 25 
-        # run_taurus_with_savepoint $1 50 
-        # run_taurus_with_savepoint $1 100
+        run_taurus_with_savepoint "$1" 5 
+        run_taurus_with_savepoint "$1" 10 
+        run_taurus_with_savepoint "$1" 25 
+        run_taurus_with_savepoint "$1" 50 
     else
+        run_taurus "$1" 1
         run_taurus "$1" 2 
-        # run_taurus $1 5 
-        # run_taurus $1 10 
-        # run_taurus $1 25 
-        # run_taurus $1 50 
-        # run_taurus $1 100
+        run_taurus "$1" 5 
+        run_taurus "$1" 10 
+        run_taurus "$1" 25 
+        run_taurus "$1" 50 
     fi
 }
 
