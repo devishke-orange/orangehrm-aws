@@ -1,17 +1,25 @@
 #!/bin/bash
 
+# Script and asset directories
 export OHRM_DIR=/opt/orangehrm
 export SCRIPT_DIR="$OHRM_DIR/scripts"
 export HELPER_SCRIPTS_DIR="$SCRIPT_DIR/helper_scripts"
 export BACKUP_SCRIPTS_DIR="$SCRIPT_DIR/backup_scripts"
+export SSL_SCRIPTS_DIR="$SCRIPT_DIR/ssl_scripts"
 export ASSET_DIR="$OHRM_DIR/assets"
 
+# Created files and directories 
 export OHRM_HOME_DIR="$HOME/.orangehrm"
 export COMPOSE_FILE="$OHRM_HOME_DIR/compose.yml"
 export ENV_FILE="$OHRM_HOME_DIR/.env"
 export INSTALL_FILE="$OHRM_HOME_DIR/.installed"
 export LOG_DIR="$OHRM_HOME_DIR/logs"
 export BACKUP_DIR="$OHRM_HOME_DIR/backups"
+
+# SSL directories
+export WEBROOT_DIR="$OHRM_HOME_DIR/.webroot"
+export SSL_DIR="$OHRM_HOME_DIR/.ssl"
+
 
 # Create log dir
 if ! [[ -d "$LOG_DIR" ]]; then
@@ -170,6 +178,14 @@ else
                 sh "$SCRIPT_DIR/backup" "$2" >&3
             else
                 sh "$SCRIPT_DIR/backup" >&3
+            fi
+            ;;
+        ssl)
+            check_installed
+            if [[ -n $2 ]]; then
+                sh "$SCRIPT_DIR/ssl" "$2" >&3
+            else
+                sh "$SCRIPT_DIR/ssl" >&3
             fi
             ;;
         clean)

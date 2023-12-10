@@ -39,7 +39,9 @@ chown -R ec2-user:ec2-user %{buildroot}/opt/%{name}
 
 /opt/orangehrm/assets/maintenance.php
 /opt/orangehrm/assets/license.txt
+/opt/orangehrm/assets/ssl.conf
 /opt/orangehrm/scripts/backup
+/opt/orangehrm/scripts/ssl
 /opt/orangehrm/scripts/check_update
 /opt/orangehrm/scripts/clean
 /opt/orangehrm/scripts/get_logs
@@ -54,6 +56,8 @@ chown -R ec2-user:ec2-user %{buildroot}/opt/%{name}
 /opt/orangehrm/scripts/backup_scripts/restore
 /opt/orangehrm/scripts/helper_scripts/countries
 /opt/orangehrm/scripts/helper_scripts/logo
+/opt/orangehrm/scripts/ssl_scripts/ssl_help
+/opt/orangehrm/scripts/ssl_scripts/enable
 /etc/profile.d/login_orangehrm.sh
 /opt/orangehrm/compose.yml
 

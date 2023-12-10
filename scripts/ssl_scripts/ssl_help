@@ -1,0 +1,24 @@
+#!/bin/bash
+
+if [[ -z  $OHRM_DIR ]]; then
+    printf "\nPlease run this script from the OrangeHRM command\n"
+    printf "i.e. orangehrm backup help\n\n"
+    exit 1;
+fi
+
+# Provide the command in the first argument
+# Provide the description in the second argument
+print_help_message() {
+    printf "%-30b %b" "$1" "$2"
+}
+
+# TODO: write a detailed help message. mention certbot usage
+
+tput bold
+printf "\nOrangeHRM Backup Command\n\n"
+tput sgr0
+printf "This command allows you to enable SSL for your OrangeHRM instance.\n"
+echo "Usage:"
+print_help_message "  orangehrm ssl help" "Display this message.\n"
+
+printf "\nFor any further concerns, you can contact us at ossupport@orangehrm.com\n\n"
