@@ -10,12 +10,12 @@ if [[ -z  $OHRM_DIR ]]; then
     exit 1;
 fi
 
-printf "This script will run certbot from EFF\n"
-printf "Elaborate on process here!\n\n"
+printf "This script will run certbot from EFF\n" >&3
+printf "Elaborate on process here!\n\n" >&3
 
-read -rp "Press ENTER to to continue"
+read -rp "Press ENTER to to continue" 2>&3
 
-printf "\nPlease provide the following information in order to generate your SSL certificate from Let's Encrypt\n"
+printf "\nPlease provide the following information in order to generate your SSL certificate from Let's Encrypt\n" >&3
 
 # Required variables
 domain_name=""

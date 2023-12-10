@@ -27,19 +27,19 @@ err_exit() {
 
 if [[ $# -eq 0 ]]; then
     # If no arguments
-    printf "SSL help message here\n"
+    printf "SSL help message here\n" >&3
     # ohrm_ssl_script ssl_help
 else
     case $1 in
         help)
-            printf "SSL help message here\n"
+            printf "SSL help message here\n" >&3
             # ohrm_ssl_script ssl_help
             ;;
         enable)
             ohrm_ssl_script enable
             ;;
         *)
-            printf "\n%b%s%b is not an orangehrm ssl commmand" "$RC" "$1" "$EC" >&3
+            printf "\n%b%s%b is not an orangehrm ssl commmand\n" "$RC" "$1" "$EC" >&3
             printf "See '%borangehrm ssl help%b'\n\n" "$GC" "$EC" >&3
             ;;
     esac
