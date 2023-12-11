@@ -46,7 +46,7 @@ if docker run -it --rm --name certbot --mount source=orangehrm_orangehrm-data,ta
     # Add read permission within container for SSL certificates
     docker exec orangehrm chmod 400 /etc/letsencrypt
 
-    domains=("$(docker exec orangehrm ls /etc/letsencrypt/archive)")
+    domains=("$(docker run --name certbot --rm --mount source=orangehrm_orangehrm-cert-data,target=/etc/letsencrypt certbot/certbot certificates | grep "    Domains: " | sed 's/    Domains: //')")
 
     if [ "${#domains[@]}" -eq "0" ]; then
         ohrm_print "Something has gone wrong!"
@@ -77,8 +77,12 @@ if docker run -it --rm --name certbot --mount source=orangehrm_orangehrm-data,ta
     ohrm_print "You can now access OrangeHRM at the following URLS:\n"
 
     for domain in "${domains[@]}"; do
-        printf "\t%b%s%b\n" "$GC" "$domain" "$EC" >&3
+        printf "  %bhttps://%s%b\n" "$GC" "$domain" "$EC" >&3
     done
 else
     ohrm_print "Something went wrong! Please try again\n\n"
 fi
+
+ohrm_print "\n"
+
+ohrm_print "Add section about renewing certificates"

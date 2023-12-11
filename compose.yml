@@ -6,8 +6,9 @@ services:
       - "80:80"
       - "443:443"
     volumes:
-      - orangehrm-data:/var/www/html
-      - orangehrm-cert-data:/etc/letsencrypt
+      - orangehrm-webroot:/var/www/html
+      - orangehrm-cert:/etc/letsencrypt
+      - orangehrm-server:/etc/apache2
     networks:
       - orangehrm
     container_name: orangehrm
@@ -20,7 +21,7 @@ services:
     environment:
       - MARIADB_ROOT_PASSWORD=${MARIADB_ROOT_PW}
     volumes:
-      - orangehrm-db-data:/var/lib/mysql
+      - orangehrm-db:/var/lib/mysql
     networks:
       - orangehrm
     container_name: mariadb
@@ -29,6 +30,7 @@ networks:
   orangehrm:
 
 volumes:
-  orangehrm-data:
-  orangehrm-cert-data:
-  orangehrm-db-data:
+  orangehrm-webroot:
+  orangehrm-cert:
+  orangehrm-server:
+  orangehrm-db:
