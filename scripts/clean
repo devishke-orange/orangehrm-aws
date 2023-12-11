@@ -36,19 +36,27 @@ fi
 
 print_progress_message "Wiping OrangeHRM data" success rewrite
 
+check_file_exists_and_remove() {
+    if [[ -f "$1" ]]; then
+     rm -f "$1"
+    fi
+}
+
 print_progress_message "Removing OrangeHRM files" wip
-rm -f "$COMPOSE_FILE"
-rm -f "$ENV_FILE"
-rm -f "$INSTALL_FILE"
+check_file_exists_and_remove "$COMPOSE_FILE"
+check_file_exists_and_remove "$ENV_FILE"
+check_file_exists_and_remove "$INSTALL_FILE"
+
+# Not necessary to check for these since they get created when running orangehrm command
 rm -rf "$BACKUP_DIR"
-cp "$LOG_DIR" "$HOME/ohrm_logs_$(date +"%Y_%m_%d")"
+cp -r "$LOG_DIR" "$HOME/ohrm_logs_$(date +"%Y_%m_%d")"
 rm -rf "$LOG_DIR"
 print_progress_message "Removing OrangeHRM files" success rewrite
 
 ohrm_print "\n"
 
 ohrm_print "All data related to orangehrm has been wiped!\n\n"
-printf "Your log files have been stored at %s\n" "$HOME/ohrm_logs_$(date +"%Y_%m_%d")" >&3
+printf "Your log files have been stored at %s\n" "$HOME/ohrm_logs_$(date +"%Y_%m_%d_%H_%M_%S")" >&3
 printf "To reinstall the system please run '%borangehrm install%b'\n\n" "$GC" "$EC" >&3
 
 if [[ -d "$SSL_DIR" ]]; then

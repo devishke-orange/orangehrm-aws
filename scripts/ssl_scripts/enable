@@ -10,6 +10,8 @@ if [[ -z  $OHRM_DIR ]]; then
     exit 1
 fi
 
+ohrm_print "\n"
+
 if [[ -d "$SSL_DIR" ]]; then
     ohrm_print "The SSL directory already exists. You may have generated certificates previously\n"
     printf "You can run %borangehrm ssl restore%b if you wish to reuse your existing certificates\n" "$GC" "$EC" >&3
@@ -28,23 +30,25 @@ ohrm_print "\n"
 print_progress_message "Preparing OrangeHRM System" wip
 
 # Adding mounts to docker compose file
-docker cp orangehrm:/var/www/html "$WEBROOT_DIR"
-cp "$COMPOSE_FILE" "$COMPOSE_FILE.backup"
-chmod 600 "$COMPOSE_FILE"
-sed -i "7 a \ \ \ \ volumes:" "$COMPOSE_FILE"
-sed -i "8 a \ \ \ \ \ \ - \"$SSL_DIR:/etc/letsencrypt\"" "$COMPOSE_FILE"
-sed -i "9 a \ \ \ \ \ \ - \"$WEBROOT_DIR:/var/www/html\"" "$COMPOSE_FILE"
-docker compose -f "$COMPOSE_FILE" up -d
+# docker cp orangehrm:/var/www/html "$WEBROOT_DIR"
+# cp "$COMPOSE_FILE" "$COMPOSE_FILE.backup"
+# chmod 600 "$COMPOSE_FILE"
+# sed -i "7 a \ \ \ \ volumes:" "$COMPOSE_FILE"
+# sed -i "8 a \ \ \ \ \ \ - \"$SSL_DIR:/etc/letsencrypt\"" "$COMPOSE_FILE"
+# sed -i "9 a \ \ \ \ \ \ - \"$WEBROOT_DIR:/var/www/html\"" "$COMPOSE_FILE"
+# docker compose -f "$COMPOSE_FILE" up -d
 
 docker exec orangehrm sed -i "3 d" /var/www/html/.htaccess
 docker exec orangehrm sed -i '2 a RedirectMatch 404 /(?!\\.well\\-known)\\..*$' /var/www/html/.htaccess
 
 print_progress_message "Preparing OrangeHRM System" success rewrite
 
+ohrm_print "\n"
+
 ohrm_print "Your OrangeHRM instance is now prepared for SSL certificate generation\n"
 ohrm_print "The OrangeHRM command line utility will now run Certbot\n\n"
 
-if docker run -it --rm --name certbot -v "$WEBROOT_DIR:/var/www/html" -v "$SSL_DIR:/etc/letsencrypt" -v "$LOG_DIR:/var/log/letsencrypt" certbot/certbot certonly --webroot --webroot-path /var/www/html >&3; then
+if docker run -it --rm --name certbot --mount "orangehrm-data:/var/www/html" --mount "orangehrm-cert-data:/etc/letsencrypt" -v "$LOG_DIR:/var/log/letsencrypt" certbot/certbot certonly --webroot --webroot-path /var/www/html >&3; then
     print_progress_message "Certificates generated" success
     print_progress_message "Preparing server" wip
 
@@ -66,7 +70,16 @@ if docker run -it --rm --name certbot -v "$WEBROOT_DIR:/var/www/html" -v "$SSL_D
 
     docker exec orangehrm rm -f /etc/apache2/sites-enabled/000-default.conf
     docker exec orangehrm a2enmod ssl
-    docker exec orangehrm service apache2 restart
+    
+    # docker exec orangehrm service apache2 restart exits with error on success causing the script to fail because of set -e
+    # by putting it in an if condition this is avoided
+    if docker exec orangehrm service apache2 restart; then
+        ohrm_print "The apache service did not restart properly!\n"
+        ohrm_print "Please run 'docker exec orangehrm service apache2 restart'\n"
+    fi
+
+    # Cache folder permissions
+    docker exec orangehrm chmod -R 775 /var/www/html/src/cache
 
     print_progress_message "Preparing server" success rewrite
 
@@ -80,7 +93,7 @@ else
 fi
 
 # Removing webroot
-docker exec orangehrm sed -i "10 d" "$COMPOSE_FILE"
-docker compose -f "$COMPOSE_FILE" up -d
+# docker exec orangehrm sed -i "10 d" "$COMPOSE_FILE"
+# docker compose -f "$COMPOSE_FILE" up -d
 
-rm -rf "$WEBROOT_DIR"
+# rm -rf "$WEBROOT_DIR"

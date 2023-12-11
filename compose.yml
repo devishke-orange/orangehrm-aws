@@ -5,6 +5,9 @@ services:
     ports:
       - "80:80"
       - "443:443"
+    volumes:
+      - orangehrm-data:/var/www/html
+      - orangehrm-cert-data:/etc/letsencrypt
     networks:
       - orangehrm
     container_name: orangehrm
@@ -17,7 +20,7 @@ services:
     environment:
       - MARIADB_ROOT_PASSWORD=${MARIADB_ROOT_PW}
     volumes:
-      - orangehrm-data:/var/lib/mysql
+      - orangehrm-db-data:/var/lib/mysql
     networks:
       - orangehrm
     container_name: mariadb
@@ -27,3 +30,5 @@ networks:
 
 volumes:
   orangehrm-data:
+  orangehrm-cert-data:
+  orangehrm-db-data:
