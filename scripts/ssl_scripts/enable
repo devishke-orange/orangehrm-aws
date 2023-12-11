@@ -7,11 +7,19 @@ set -e
 if [[ -z  $OHRM_DIR ]]; then
     ohrm_print "\nPlease run this script from the OrangeHRM command\n"
     ohrm_print "i.e. orangehrm ssl enable\n\n"
-    exit 1;
+    exit 1
 fi
 
-ohrm_print "This script will run certbot from EFF\n"
-ohrm_print "Elaborate on process here!\n\n"
+if [[ -d "$SSL_DIR" ]]; then
+    ohrm_print "The SSL directory already exists. You may have generated certificates previously\n"
+    printf "You can run %borangehrm ssl restore%b if you wish to reuse your existing certificates\n" "$GC" "$EC" >&3
+    ohrm_print "Or else you can delete the existing directory by running sudo rm -rf $SSL_DIR\n"
+    exit 1
+fi
+
+ohrm_print "In order to generate SSL certificates, the OrangeHRM command line utility employs Certbot by the Electronic Frontier Foundation\n"
+ohrm_print "Certbot is a free, open source software tool for automatically using Let's Encrypt certificates on manually-administrated websites to enable HTTPS.\n"
+ohrm_print "To learn more about certbot, please visit https://certbot.eff.org/\n\n"
 
 read -rp "Press ENTER to to continue" 2>&3
 
@@ -33,34 +41,45 @@ docker exec orangehrm sed -i '2 a RedirectMatch 404 /(?!\\.well\\-known)\\..*$' 
 
 print_progress_message "Preparing OrangeHRM System" success rewrite
 
-domain_name=""
-email=""
+ohrm_print "Your OrangeHRM instance is now prepared for SSL certificate generation\n"
+ohrm_print "The OrangeHRM command line utility will now run Certbot\n\n"
 
-read -rp "Enter your domain name:\n> " domain_name
-
-read -rp "Enter your email:\n> " email
-
-ohrm_print "\nCertbot will now run\n"
-
-# Remove --dry-run
-if docker run -it --rm --name certbot -v "$WEBROOT_DIR:/var/www/html" -v "$SSL_DIR:/etc/letsencrypt" -v "$LOG_DIR:/var/log/letsencrypt" certbot/certbot certonly --dry-run --webroot --webroot-path /var/www/html -m "$email" -d "$domain_name" >&3; then
+if docker run -it --rm --name certbot -v "$WEBROOT_DIR:/var/www/html" -v "$SSL_DIR:/etc/letsencrypt" -v "$LOG_DIR:/var/log/letsencrypt" certbot/certbot certonly --webroot --webroot-path /var/www/html >&3; then
     print_progress_message "Certificates generated" success
     print_progress_message "Preparing server" wip
 
-    docker cp "$SSL_CONF_FILE" orangehrm:/etc/apache2/sites-available/ssl.conf
-    docker exec orangehrm sed -i "s/YOUR_SERVER_NAME/$domain_name/g" /etc/apache2/sites-available/ssl.conf
-    docker exec orangehrm ln -s ../sites-available/ssl.conf /etc/apache2/sites-enabled/ssl.conf
+    # Add read permission within container for SSL certificates
+    docker exec orangehrm chmod 400 /etc/letsencrypt
+
+    domains=("$(docker exec orangehrm ls /etc/letsencrypt/archive)")
+
+    if [ "${#domains[@]}" -eq "0" ]; then
+        ohrm_print "Something has gone wrong!"
+        exit 1
+    fi
+
+    for domain in "${domains[@]}"; do
+        docker cp "$SSL_CONF_FILE" "orangehrm:/etc/apache2/sites-available/$domain.conf"
+        docker exec orangehrm sed -i "s/YOUR_SERVER_NAME/$domain/g" "/etc/apache2/sites-available/$domain.conf"
+        docker exec orangehrm ln -s "../sites-available/$domain.conf" "/etc/apache2/sites-enabled/$domain.conf"
+    done
+
     docker exec orangehrm rm -f /etc/apache2/sites-enabled/000-default.conf
     docker exec orangehrm a2enmod ssl
     docker exec orangehrm service apache2 restart
 
     print_progress_message "Preparing server" success rewrite
 
-    printf "You can now access OrangeHRM at %bhttps://%s%b\n\n" "$GC" "$domain_name" "$EC"
+    ohrm_print "You can now access OrangeHRM at the following URLS:\n"
+
+    for domain in "${domains[@]}"; do
+        printf "\t%b%s%b\n" "$GC" "$domain" "$EC" >&3
+    done
 else
-    ohrm_print "FAILURE!\n"
+    ohrm_print "Something went wrong! Please try again\n\n"
 fi
 
+# Removing webroot
 docker exec orangehrm sed -i "10 d" "$COMPOSE_FILE"
 docker compose -f "$COMPOSE_FILE" up -d
 

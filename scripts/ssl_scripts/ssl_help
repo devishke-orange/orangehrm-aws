@@ -3,7 +3,7 @@
 if [[ -z  $OHRM_DIR ]]; then
     printf "\nPlease run this script from the OrangeHRM command\n"
     printf "i.e. orangehrm backup help\n\n"
-    exit 1;
+    exit 1
 fi
 
 # Provide the command in the first argument
