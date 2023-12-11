@@ -24,29 +24,44 @@ docker cp orangehrm:/var/www/html "$WEBROOT_DIR"
 cp "$COMPOSE_FILE" "$COMPOSE_FILE.backup"
 chmod 600 "$COMPOSE_FILE"
 sed -i "7 a \ \ \ \ volumes:" "$COMPOSE_FILE"
-sed -i "8 a \ \ \ \ \ \ - \"$WEBROOT_DIR:/var/www/html\"" "$COMPOSE_FILE"
-sed -i "9 a \ \ \ \ \ \ - \"$SSL_DIR:/etc/letsencrypt\"" "$COMPOSE_FILE"
+sed -i "8 a \ \ \ \ \ \ - \"$SSL_DIR:/etc/letsencrypt\"" "$COMPOSE_FILE"
+sed -i "9 a \ \ \ \ \ \ - \"$WEBROOT_DIR:/var/www/html\"" "$COMPOSE_FILE"
 docker compose -f "$COMPOSE_FILE" up -d
 
-docker cp orangehrm:/var/www/html/.htaccess "$OHRM_HOME_DIR/.htaccess.backup"
 docker exec orangehrm sed -i "3 d" /var/www/html/.htaccess
 docker exec orangehrm sed -i '2 a RedirectMatch 404 /(?!\\.well\\-known)\\..*$' /var/www/html/.htaccess
 
 print_progress_message "Preparing OrangeHRM System" success rewrite
 
-ohrm_print "Certbot will now run\n"
+domain_name=""
+email=""
+
+read -rp "Enter your domain name:\n> " domain_name
+
+read -rp "Enter your email:\n> " email
+
+ohrm_print "\nCertbot will now run\n"
 
 # Remove --dry-run
-if docker run -it --rm --name certbot -v "$WEBROOT_DIR:/var/www/html" -v "$SSL_DIR:/etc/letsencrypt" -v "$LOG_DIR:/var/log/letsencrypt" certbot/certbot certonly --dry-run --webroot --webroot-path /var/www/html >&3; then
-    ohrm_print "SUCCCESS!\n"
+if docker run -it --rm --name certbot -v "$WEBROOT_DIR:/var/www/html" -v "$SSL_DIR:/etc/letsencrypt" -v "$LOG_DIR:/var/log/letsencrypt" certbot/certbot certonly --dry-run --webroot --webroot-path /var/www/html -m "$email" -d "$domain_name" >&3; then
+    print_progress_message "Certificates generated" success
+    print_progress_message "Preparing server" wip
+
+    docker cp "$SSL_CONF_FILE" orangehrm:/etc/apache2/sites-available/ssl.conf
+    docker exec orangehrm sed -i "s/YOUR_SERVER_NAME/$domain_name/g" /etc/apache2/sites-available/ssl.conf
+    docker exec orangehrm ln -s ../sites-available/ssl.conf /etc/apache2/sites-enabled/ssl.conf
+    docker exec orangehrm rm -f /etc/apache2/sites-enabled/000-default.conf
+    docker exec orangehrm a2enmod ssl
+    docker exec orangehrm service apache2 restart
+
+    print_progress_message "Preparing server" success rewrite
+
+    printf "You can now access OrangeHRM at %bhttps://%s%b\n\n" "$GC" "$domain_name" "$EC"
 else
     ohrm_print "FAILURE!\n"
 fi
 
-cp "$COMPOSE_FILE.backup" "$COMPOSE_FILE"
-rm -f "$COMPOSE_FILE.backup"
-
+docker exec orangehrm sed -i "10 d" "$COMPOSE_FILE"
 docker compose -f "$COMPOSE_FILE" up -d
 
 rm -rf "$WEBROOT_DIR"
-rm -rf "$SSL_DIR"

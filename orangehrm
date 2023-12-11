@@ -10,15 +10,16 @@ export ASSET_DIR="$OHRM_DIR/assets"
 
 # Created files and directories 
 export OHRM_HOME_DIR="$HOME/.orangehrm"
+export LOG_DIR="$OHRM_HOME_DIR/logs"
+export BACKUP_DIR="$OHRM_HOME_DIR/backups"
 export COMPOSE_FILE="$OHRM_HOME_DIR/compose.yml"
 export ENV_FILE="$OHRM_HOME_DIR/.env"
 export INSTALL_FILE="$OHRM_HOME_DIR/.installed"
-export LOG_DIR="$OHRM_HOME_DIR/logs"
-export BACKUP_DIR="$OHRM_HOME_DIR/backups"
 
-# SSL directories
+# SSL files and directories
 export WEBROOT_DIR="$OHRM_HOME_DIR/.webroot"
 export SSL_DIR="$OHRM_HOME_DIR/.ssl"
+export SSL_CONF_FILE="$ASSET_DIR/ssl.conf"
 
 
 # Create log dir
