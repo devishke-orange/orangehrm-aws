@@ -5,20 +5,44 @@ set -x
 set -e
 
 if [[ -z  $OHRM_DIR ]]; then
-    printf "\nPlease run this script from the OrangeHRM command\n" >&3
-    printf "i.e. orangehrm ssl enable\n\n" >&3
+    ohrm_print "\nPlease run this script from the OrangeHRM command\n"
+    ohrm_print "i.e. orangehrm ssl enable\n\n"
     exit 1;
 fi
 
-printf "This script will run certbot from EFF\n" >&3
-printf "Elaborate on process here!\n\n" >&3
+ohrm_print "This script will run certbot from EFF\n"
+ohrm_print "Elaborate on process here!\n\n"
 
 read -rp "Press ENTER to to continue" 2>&3
 
-printf "\nPlease provide the following information in order to generate your SSL certificate from Let's Encrypt\n" >&3
+ohrm_print "\n"
 
-# Required variables
-domain_name=""
-email=""
-agree_eff=""
-agree_mail=""
+print_progress_message "Preparing OrangeHRM System" wip
+
+# Adding mounts to docker compose file
+docker cp orangehrm:/var/www/html "$WEBROOT_DIR"
+cp "$COMPOSE_FILE" "$COMPOSE_FILE.backup"
+chmod 600 "$COMPOSE_FILE"
+sed -i "7 a \ \ \ \ volumes:" "$COMPOSE_FILE"
+sed -i "8 a \ \ \ \ \ \ - \"$WEBROOT_DIR:/var/www/html\"" "$COMPOSE_FILE"
+sed -i "9 a \ \ \ \ \ \ - \"$SSL_DIR:/etc/letsencrypt\"" "$COMPOSE_FILE"
+docker compose -f "$COMPOSE_FILE" up -d
+
+print_progress_message "Preparing OrangeHRM System" success rewrite
+
+ohrm_print "Certbot will now run\n"
+
+# Remove --dry-run
+if docker run -it --rm --name certbot -v "$WEBROOT_DIR:/var/www/html" -v "$SSL_DIR:/etc/letsencrypt" certbot/certbot certonly --dry-run --webroot --webroot-path /var/www/html >&3; then
+    ohrm_print "SUCCCESS!\n"
+else
+    ohrm_print "FAILURE!\n"
+fi
+
+cp "$COMPOSE_FILE.backup" "$COMPOSE_FILE"
+rm -f "$COMPOSE_FILE.backup"
+
+docker compose -f "$COMPOSE_FILE" up -d
+
+rm -rf "$WEBROOT_DIR"
+rm -rf "$SSL_DIR"

@@ -113,9 +113,17 @@ quit_if_input() {
     fi
 }
 
+# Simple function that provides one argument to printf and redirect to file descriptor 3
+# Intended for cases where strings are printed without additional arguments
+# shellcheck disable=SC2317
+ohrm_print() {
+    printf "%b" "$1" >&3
+}
+
 export -f print_progress_message
 export -f yes_no_check
 export -f quit_if_input
+export -f ohrm_print
 
 # Function to run scripts.
 # Give the name of the script as the first argument
