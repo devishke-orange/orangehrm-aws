@@ -38,6 +38,9 @@ else
         enable)
             ohrm_ssl_script enable
             ;;
+        add-domain)
+            ohrm_ssl_script add_domain
+            ;;
         *)
             printf "\n%b%s%b is not an orangehrm ssl commmand\n" "$RC" "$1" "$EC" >&3
             printf "See '%borangehrm ssl help%b'\n\n" "$GC" "$EC" >&3
