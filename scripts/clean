@@ -37,13 +37,14 @@ fi
 print_progress_message "Wiping OrangeHRM data" success rewrite
 
 print_progress_message "Removing OrangeHRM files" wip
-cp -r "$LOG_DIR" "$HOME/ohrm_logs_$(date +"%Y_%m_%d")"
+cp -r "$LOG_DIR" "$HOME/ohrm_logs_$(date +"%Y_%m_%d_%H_%M_%S")"
 rm -rf "$OHRM_HOME_DIR"
 print_progress_message "Removing OrangeHRM files" success rewrite
 
-print_progress_message "Removing OrangeHRM volume" wip
-docker volume rm orangehrm_orangehrm-data
-print_progress_message "Removing OrangeHRM volume" success rewrite
+print_progress_message "Removing OrangeHRM volumes" wip
+docker volume rm orangehrm_orangehrm-webroot
+docker volume rm orangehrm_orangehrm-db
+print_progress_message "Removing OrangeHRM volumes" success rewrite
 
 ohrm_print "\n"
 
@@ -51,6 +52,6 @@ ohrm_print "All data related to orangehrm has been wiped!\n\n"
 printf "Your log files have been stored at %s\n" "$HOME/ohrm_logs_$(date +"%Y_%m_%d_%H_%M_%S")" >&3
 printf "To reinstall the system please run '%borangehrm install%b'\n\n" "$GC" "$EC" >&3
 
-ohrm_print "NOTE: Generated SSL certificates have not been removed\n"
+ohrm_print "NOTE: Generated SSL certificates and server configurations have not been removed\n"
 
 exit 0
