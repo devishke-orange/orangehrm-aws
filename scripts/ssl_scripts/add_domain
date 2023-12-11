@@ -32,7 +32,8 @@ docker exec orangehrm ls /etc/apache2/sites-enabled | sed 's/.conf//g' >&3
 
 domain_name=""
 
-read -rp "Add a new domain to be enabled (it should match the name in the certificate list exactly):\n> " domain_name
+read -rp "Add a new domain to be enabled (it should match the name in the certificate list exactly):\n> " domain_name 2>&3
+
 if ! docker exec orangherm ls /etc/apache2/sites-enabled | grep "^$domain_name"; then
     if docker run -it --rm --name certbot --mount source=orangehrm_orangehrm-cert,target=/etc/letsencrypt certbot/certbot certificates | grep "^$domain_name$"; then
         docker cp "$SSL_CONF_FILE" "orangehrm:/etc/apache2/sites-available/$domain_name.conf"

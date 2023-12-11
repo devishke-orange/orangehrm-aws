@@ -410,6 +410,14 @@ write_install_file() {
 	printf "\n%bOrangeHRM %s is finished installing!%b\n\n" "$GC" "$version" "$EC" >&3
 }
 
+enable_ssl_mod() {
+	docker exec orangehrm a2enmod ssl
+	if docker exec orangehrm service apache2 restart; then
+        ohrm_print "The apache service did not restart properly!\n"
+        ohrm_print "Please run 'docker exec orangehrm service apache2 restart'\n"
+    fi
+}
+
 print_login_steps() {
 	# Get AWS Instance IP
 	# https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/instancedata-data-retrieval.html
@@ -440,6 +448,7 @@ generate_random_user_password
 update_configuration
 install_orangehrm
 write_install_file
+enable_ssl_mod
 print_login_steps
 
 exit 0
