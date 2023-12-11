@@ -39,14 +39,14 @@ ohrm_print "\n"
 ohrm_print "Your OrangeHRM instance is now prepared for SSL certificate generation\n"
 ohrm_print "The OrangeHRM command line utility will now run Certbot\n\n"
 
-if docker run -it --rm --name certbot --mount source=orangehrm_orangehrm-data,target=/var/www/html --mount source=orangehrm_orangehrm-cert-data,target=/etc/letsencrypt --mount type=bind,source="$LOG_DIR",target=/var/log/letsencrypt certbot/certbot certonly --webroot --webroot-path /var/www/html >&3; then
+if docker run -it --rm --name certbot --mount source=orangehrm_orangehrm-webroot,target=/var/www/html --mount source=orangehrm_orangehrm-cert,target=/etc/letsencrypt --mount type=bind,source="$LOG_DIR",target=/var/log/letsencrypt certbot/certbot certonly --webroot --webroot-path /var/www/html >&3; then
     print_progress_message "Certificates generated" success
     print_progress_message "Preparing server" wip
 
     # Add read permission within container for SSL certificates
     docker exec orangehrm chmod 400 /etc/letsencrypt
 
-    domains=("$(docker run --name certbot --rm --mount source=orangehrm_orangehrm-cert-data,target=/etc/letsencrypt certbot/certbot certificates | grep "    Domains: " | sed 's/    Domains: //')")
+    domains=("$(docker run --name certbot --rm --mount source=orangehrm_orangehrm-cert,target=/etc/letsencrypt certbot/certbot certificates | grep "    Domains: " | sed 's/    Domains: //')")
 
     if [ "${#domains[@]}" -eq "0" ]; then
         ohrm_print "Something has gone wrong!"
