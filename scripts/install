@@ -71,7 +71,7 @@ check_prereq () {
 }
 
 early_exit () {
-	printf "\n%bQuitting the intstallation%b\n" "$RC" "$EC" >&3
+	printf "\n%bQuitting the installation%b\n" "$RC" "$EC" >&3
 	print_progress_message "Cleaning install files" wip
 
 	if [[ -f "$COMPOSE_FILE" ]]; then

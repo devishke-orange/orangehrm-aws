@@ -28,12 +28,16 @@ sed -i "8 a \ \ \ \ \ \ - \"$WEBROOT_DIR:/var/www/html\"" "$COMPOSE_FILE"
 sed -i "9 a \ \ \ \ \ \ - \"$SSL_DIR:/etc/letsencrypt\"" "$COMPOSE_FILE"
 docker compose -f "$COMPOSE_FILE" up -d
 
+docker cp orangehrm:/var/www/html/.htaccess "$OHRM_HOME_DIR/.htaccess.backup"
+docker exec orangehrm sed -i "3 d" /var/www/html/.htaccess
+docker exec orangehrm sed -i '2 a RedirectMatch 404 /(?!\\.well\\-known)\\..*$' /var/www/html/.htaccess
+
 print_progress_message "Preparing OrangeHRM System" success rewrite
 
 ohrm_print "Certbot will now run\n"
 
 # Remove --dry-run
-if docker run -it --rm --name certbot -v "$WEBROOT_DIR:/var/www/html" -v "$SSL_DIR:/etc/letsencrypt" certbot/certbot certonly --dry-run --webroot --webroot-path /var/www/html >&3; then
+if docker run -it --rm --name certbot -v "$WEBROOT_DIR:/var/www/html" -v "$SSL_DIR:/etc/letsencrypt" -v "$LOG_DIR:/var/log/letsencrypt" certbot/certbot certonly --dry-run --webroot --webroot-path /var/www/html >&3; then
     ohrm_print "SUCCCESS!\n"
 else
     ohrm_print "FAILURE!\n"
