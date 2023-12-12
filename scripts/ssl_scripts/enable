@@ -22,7 +22,7 @@ ohrm_print "\n"
 
 print_progress_message "Checking for existing certificates" wip
 
-if ! docker run -it --rm --name certbot --mount source=orangehrm_orangehrm-cert,target=/etc/letsencrypt certbot/certbot certificates | grep "No certificates found"; then
+if ! docker exec certbot certbot certificates | grep "No certificates found"; then
     ohrm_print "You already have some generated certificates available for use.\n"
     docker run -it --rm --name certbot --mount source=orangehrm_orangehrm-cert,target=/etc/letsencrypt certbot/certbot certificates >&3
     exit 0
@@ -42,20 +42,36 @@ ohrm_print "\n"
 ohrm_print "Your OrangeHRM instance is now prepared for SSL certificate generation\n"
 ohrm_print "The OrangeHRM command line utility will now run Certbot\n\n"
 
-if docker run -it --rm --name certbot --mount source=orangehrm_orangehrm-webroot,target=/var/www/html --mount source=orangehrm_orangehrm-cert,target=/etc/letsencrypt --mount type=bind,source="$LOG_DIR",target=/var/log/letsencrypt certbot/certbot certonly --webroot --webroot-path /var/www/html >&3; then
+if docker exec certbot certbot certonly --webroot --webroot-path /var/www/html >&3; then
     print_progress_message "Certificates generated" success
     print_progress_message "Preparing server" wip
 
     # Add read permission within container for SSL certificates
     docker exec orangehrm chmod 400 /etc/letsencrypt
 
-    domain="$(docker exec orangehrm ls /etc/letsencrypt/archive)"
+    tmp_dir="${OHRM_HOME_DIR}/.tmp/$(echo $RANDOM | md5sum | head -c 10)"
+    
+    docker exec certbot certbot certificates > "$tmp_dir/cert.txt"
 
-    if ! docker exec orangehrm find "/etc/apache2/sites-available/$domain.conf"; then
-        docker cp "$SSL_CONF_FILE" "orangehrm:/etc/apache2/sites-available/$domain.conf"
-        docker exec orangehrm sed -i "s/YOUR_SERVER_NAME/$domain/g" "/etc/apache2/sites-available/$domain.conf"
-        docker exec orangehrm ln -s "../sites-available/$domain.conf" "/etc/apache2/sites-enabled/$domain.conf"
-    fi
+    grep '  Certificate Name: ' < "$tmp_dir/cert.txt" | sed 's/  Certificate Name: //g' > "$tmp_dir/cert_name.txt"
+    mapfile -t certificate_names < "$tmp_dir/cert_name.txt"
+
+    grep "    Domains: " < "$tmp_dir/cert.txt" | sed 's/    Domains: //g' | tr '\n' ' ' > "$tmp_dir/domain_name.txt"
+    mapfile -t -d " " domains < "$tmp_dir/domain_name.txt"
+
+    sed 's/    //g' "cert.txt"  | sed 's/  //g' | tr '\n' ',' > "$tmp_dir/cert-grep.txt"
+
+    for domain in "${domains[@]}"; do
+        for cert_name in "${certificate_names[@]}"; do
+            grep_output="$(grep -o "Certificate Name: $cert_name,[^,]*,[^,]*,Domains: [^,]*$domain" "$tmp_dir/cert-grep.txt")"
+            if [[ -n $grep_output ]]; then
+                docker cp "$SSL_CONF_FILE" "orangehrm:/etc/apache2/sites-available/$domain.conf"
+                docker exec orangehrm sed -i "s/YOUR_SERVER_NAME/$domain/g" "/etc/apache2/sites-available/$domain.conf"
+                docker exec orangehrm sed -i "s/YOUR_CERT_NAME/$cert_name/g" "/etc/apache2/sites-available/$domain.conf"
+                docker exec orangehrm ln -s "../sites-available/$domain.conf" "/etc/apache2/sites-enabled/$domain.conf"
+            fi
+        done
+    done    
 
     docker exec orangehrm rm -f /etc/apache2/sites-enabled/000-default.conf
     docker exec orangehrm a2enmod ssl
@@ -66,6 +82,9 @@ if docker run -it --rm --name certbot --mount source=orangehrm_orangehrm-webroot
         ohrm_print "The apache service did not restart properly!\n"
         ohrm_print "Please run 'docker exec orangehrm service apache2 restart'\n"
     fi
+
+    # Remove tmp directory
+    rm -rf "$tmp_dir"
 
     # Cache folder permissions
     docker exec orangehrm chmod -R 775 /var/www/html/src/cache

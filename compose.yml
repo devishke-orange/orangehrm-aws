@@ -26,6 +26,18 @@ services:
       - orangehrm
     container_name: mariadb
 
+  certbot:
+    image: certbot/certbot
+    restart: always
+    volumes:
+      - orangehrm-webroot:/var/www/html
+      - orangehrm-cert:/etc/letsencrypt
+    networks:
+      - orangehrm
+    entrypoint: /bin/sh
+    tty: true
+    container_name: certbot
+
 networks:
   orangehrm:
 

@@ -1,0 +1,62 @@
+#!/bin/bash
+
+exec 3>&1 1>>"$LOG_DIR/orangehrm_ssl_add_domain.log" 2>&1
+set -x
+set -e
+
+if [[ -z $OHRM_DIR ]]; then
+    printf "\nPlease run this script from the OrangeHRM command\n" >&3
+    printf "i.e. orangehrm ssl\n\n" >&3
+    exit 1;
+fi
+
+ohrm_print "This tool assists you with restoring your SSL configuration\n\n"
+
+print_progress_message "Checking for existing certificates" wip
+
+if docker run -it --rm --name certbot --mount source=orangehrm_orangehrm-cert,target=/etc/letsencrypt certbot/certbot certificates | grep "No certificates found"; then
+    ohrm_print "You have not generated any certificates\n"
+    printf "You can run '%borangehrm ssl enable%b'\n\n" "$GC" "$EC" >&3
+    exit 0
+fi
+
+print_progress_message "Checking for existing certificates" success rewrite
+
+ohrm_print "Some existing certificates have been detected! Would you like to restore the server configuration?\n"
+
+read -rp "Press ENTER to continue" 2>&3
+
+docker exec orangehrm chmod 400 /etc/letsencrypt
+
+tmp_dir="${OHRM_HOME_DIR}/.tmp/$(echo $RANDOM | md5sum | head -c 10)"
+
+# Determine certificate names and associated domains by using certbot certificates
+
+docker exec certbot certbot certificates > "$tmp_dir/cert.txt"
+
+grep '  Certificate Name: ' < "$tmp_dir/cert.txt" | sed 's/  Certificate Name: //g' > "$tmp_dir/cert_name.txt"
+mapfile -t certificate_names < "$tmp_dir/cert_name.txt"
+
+grep "    Domains: " < "$tmp_dir/cert.txt" | sed 's/    Domains: //g' | tr '\n' ' ' > "$tmp_dir/domain_name.txt"
+mapfile -t -d " " domains < "$tmp_dir/domain_name.txt"
+
+sed 's/    //g' "cert.txt"  | sed 's/  //g' | tr '\n' ',' > "$tmp_dir/cert-grep.txt"
+
+for domain in "${domains[@]}"; do
+    for cert_name in "${certificate_names[@]}"; do
+        grep_output="$(grep -o "Certificate Name: $cert_name,[^,]*,[^,]*,Domains: [^,]*$domain" "$tmp_dir/cert-grep.txt")"
+        if [[ -n $grep_output ]]; then
+            if ! docker exec orangehrm find "/etc/apache2/sites-enabled/$domain.conf"; then
+                docker cp "$SSL_CONF_FILE" "orangehrm:/etc/apache2/sites-available/$domain.conf"
+                docker exec orangehrm sed -i "s/YOUR_SERVER_NAME/$domain/g" "/etc/apache2/sites-available/$domain.conf"
+                docker exec orangehrm sed -i "s/YOUR_CERT_NAME/$cert_name/g" "/etc/apache2/sites-available/$domain.conf"
+                docker exec orangehrm ln -s "../sites-available/$domain.conf" "/etc/apache2/sites-enabled/$domain.conf"
+                printf "%s configuration restored!\n" "$domain" >&3
+            else
+                printf "%s configuration already exists!\n" "$domain" >&3
+            fi
+        fi
+    done
+done
+
+ohrm_print "\n"
