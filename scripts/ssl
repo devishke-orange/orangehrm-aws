@@ -38,8 +38,8 @@ else
         enable)
             ohrm_ssl_script enable
             ;;
-        add-domain)
-            ohrm_ssl_script add_domain
+        restore)
+            ohrm_ssl_script restore
             ;;
         *)
             printf "\n%b%s%b is not an orangehrm ssl commmand\n" "$RC" "$1" "$EC" >&3

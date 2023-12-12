@@ -29,6 +29,7 @@ read -rp "Press ENTER to continue" 2>&3
 docker exec orangehrm chmod 400 /etc/letsencrypt
 
 tmp_dir="${OHRM_HOME_DIR}/.tmp/$(echo $RANDOM | md5sum | head -c 10)"
+mkdir "$tmp_dir"
 
 # Determine certificate names and associated domains by using certbot certificates
 
