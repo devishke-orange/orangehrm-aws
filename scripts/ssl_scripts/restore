@@ -1,6 +1,6 @@
 #!/bin/bash
 
-exec 3>&1 1>>"$LOG_DIR/orangehrm_ssl_add_domain.log" 2>&1
+exec 3>&1 1>>"$LOG_DIR/orangehrm_ssl_restore.log" 2>&1
 set -x
 set -e
 
@@ -45,8 +45,7 @@ sed 's/    //g' "cert.txt"  | sed 's/  //g' | tr '\n' ',' > "$tmp_dir/cert-grep.
 
 for domain in "${domains[@]}"; do
     for cert_name in "${certificate_names[@]}"; do
-        grep_output="$(grep -o "Certificate Name: $cert_name,[^,]*,[^,]*,Domains: [^,]*$domain" "$tmp_dir/cert-grep.txt")"
-        if [[ -n $grep_output ]]; then
+        if grep -o "Certificate Name: $cert_name,[^,]*,[^,]*,Domains: [^,]*$domain" "$tmp_dir/cert-grep.txt"; then
             if ! docker exec orangehrm find "/etc/apache2/sites-enabled/$domain.conf"; then
                 docker cp "$SSL_CONF_FILE" "orangehrm:/etc/apache2/sites-available/$domain.conf"
                 docker exec orangehrm sed -i "s/YOUR_SERVER_NAME/$domain/g" "/etc/apache2/sites-available/$domain.conf"
