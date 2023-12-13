@@ -40,8 +40,6 @@ chown -R ec2-user:ec2-user %{buildroot}/opt/%{name}
 /opt/orangehrm/assets/maintenance.php
 /opt/orangehrm/assets/license.txt
 /opt/orangehrm/assets/ssl.conf
-/opt/orangehrm/assets/ssl_renew.service
-/opt/orangehrm/assets/ssl_renew.timer
 /opt/orangehrm/scripts/backup
 /opt/orangehrm/scripts/ssl
 /opt/orangehrm/scripts/check_update

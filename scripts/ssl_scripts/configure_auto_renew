@@ -52,4 +52,4 @@ ohrm_print "\n"
 
 ohrm_print "You will need to move the auto-renewal files to the relevant directory\n"
 ohrm_print "Please run the following command in your terminal\n"
-printf "%bsudo mv %s /etc/systemd/system && sudo mv %s /etc/systemd/system && sudo systemctl start ssl_renew.timer && sudo systemctl enable ssl_renew.timer%b\n\n" "$GC" "$HOME/ssl_renew.service" "$HOME/ssl_renew.timer" "$EC"
+printf "%bsudo mv %s /etc/systemd/system && sudo mv %s /etc/systemd/system && sudo systemctl start ssl_renew.timer && sudo systemctl enable ssl_renew.timer%b\n\n" "$GC" "$HOME/ssl_renew.service" "$HOME/ssl_renew.timer" "$EC" >&3
