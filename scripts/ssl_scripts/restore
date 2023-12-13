@@ -64,14 +64,7 @@ done
 
 if [[ $restart_server = "true" ]]; then
     htaccess_ssl_configure
-    docker exec orangehrm a2enmod ssl
-
-    # docker exec orangehrm service apache2 restart exits with error on success causing the script to fail because of set -e
-    # by putting it in an if condition this is avoided
-    if docker exec orangehrm service apache2 restart; then
-    ohrm_print "The apache service did not restart properly!\n"
-    ohrm_print "Please run 'docker exec orangehrm service apache2 restart'\n"
-    fi
+    apache_enable_ssl
 
     ohrm_print "Your server configurations have been restored!\n"
 else

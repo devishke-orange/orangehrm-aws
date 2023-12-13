@@ -270,6 +270,7 @@ get_config_values() {
 	
 	while ! yes_no_check "$answer"; do
 		print_installer_input_error "Please enter yes or no"
+		read -rp "> " answer 2>&3
 	done
 
 	if [[ $answer =~ $NO_REGEX ]]; then
@@ -344,9 +345,7 @@ create_containers() {
 
 	docker compose --env-file "$ENV_FILE" --file "$COMPOSE_FILE" up --detach --remove-orphans
 	
-	docker cp "$ASSET_DIR/maintenance.php" orangehrm:/var/www/html
-	docker exec orangehrm mv index.php BACKUP
-	docker exec orangehrm mv maintenance.php index.php
+	maintenance_mode enable
 
 	print_progress_message "Creating the containers" success rewrite
 }
@@ -389,8 +388,7 @@ install_orangehrm() {
 
 	docker exec orangehrm php installer/cli_install.php
 
-	docker exec orangehrm rm -f index.php
-	docker exec orangehrm mv BACKUP index.php
+	maintenance_mode disable
 
 	print_progress_message "Installing OrangeHRM" success rewrite
 }
@@ -417,11 +415,7 @@ enable_ssl_mod() {
 	docker exec orangehrm sed -i '2 a RedirectMatch 404 /(?!\\.well\\-known)\\..*$' /var/www/html/.htaccess
 	docker exec orangehrm md5sum .htaccess > "$HTACCESS_INTEGRITY_SSL_FILE"
 
-	docker exec orangehrm a2enmod ssl
-	if docker exec orangehrm service apache2 restart; then
-        ohrm_print "The apache service did not restart properly!\n"
-        ohrm_print "Please run 'docker exec orangehrm service apache2 restart'\n"
-    fi
+	apache_enable_ssl
 }
 
 print_login_steps() {

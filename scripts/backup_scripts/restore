@@ -92,12 +92,6 @@ orangehrm backup create >&3
 
 printf "\nThe backup you selected will now be restored\n\n" >&3
 
-print_progress_message "Shutting down containers" wip
-
-docker compose --file "$COMPOSE_FILE" down
-
-print_progress_message "Shutting down containers" success rewrite
-
 print_progress_message "Extracting backup" wip
 pushd "${backups[selected]}"
 if ! [[ -f backup.tar ]]; then
@@ -111,6 +105,20 @@ mkdir "$extractDir"
 tar -xf backup.tar -C "$extractDir"
 print_progress_message "Extracting backup" success rewrite
 
+print_progress_message "Shutting down containers" wip
+
+docker stop orangehrm
+docker stop mariadb
+docker stop certbot
+docker rm orangehrm
+docker rm mariadb
+docker rm certbot
+
+docker volume rm orangehrm_orangehrm-webroot
+docker volume rm orangehrm_orangehrm-db
+
+print_progress_message "Shutting down containers" success rewrite
+
 print_progress_message "Copying config files" wip
 cp -f "$extractDir/compose.yml" "$COMPOSE_FILE"
 cp -f "$extractDir/.installed" "$INSTALL_FILE"
@@ -119,6 +127,8 @@ print_progress_message "Copying config files" success rewrite
 
 print_progress_message "Starting containers" wip
 docker compose --file "$COMPOSE_FILE" up --detach --remove-orphans
+maintenance_mode enable
+apache_enable_ssl
 
 print_progress_message "Starting containers" success rewrite
 
@@ -143,8 +153,7 @@ print_progress_message "Restoring database records" success rewrite
 rm -rf "$extractDir"
 popd
 
-docker exec orangehrm rm -f index.php
-docker exec orangehrm mv BACKUP index.php
+maintenance_mode disable
 
 # shellcheck source=/home/ec2-user/.orangehrm/.installed
 source "$INSTALL_FILE"

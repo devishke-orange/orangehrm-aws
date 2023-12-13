@@ -17,15 +17,11 @@ export ENV_FILE="$OHRM_HOME_DIR/.env"
 export INSTALL_FILE="$OHRM_HOME_DIR/.installed"
 
 # SSL files, directories & variables
-export WEBROOT_DIR="$OHRM_HOME_DIR/.webroot"
-export SSL_DIR="$OHRM_HOME_DIR/.ssl"
 export SSL_CONF_FILE="$ASSET_DIR/ssl.conf"
 export HTACCESS_INTEGRITY_ORIGINAL=".integrity_original"
 export HTACCESS_INTEGRITY_SSL=".integrity_ssl"
 export HTACCESS_INTEGRITY_ORIGINAL_FILE="$OHRM_HOME_DIR/$HTACCESS_INTEGRITY_ORIGINAL"
 export HTACCESS_INTEGRITY_SSL_FILE="$OHRM_HOME_DIR/$HTACCESS_INTEGRITY_SSL"
-export SSL_RENEW_SERVICE="$ASSET_DIR/ssl_renew.service"
-export SSL_RENEW_TIMER="$ASSET_DIR/ssl_renew.timer"
 
 
 # Create log dir
@@ -145,14 +141,46 @@ htaccess_ssl_configure() {
     elif ! docker exec orangehrm md5sum -c "$HTACCESS_INTEGRITY_SSL"; then
         # If this point has reached, then the .htaccess file does not match both the original and ssl modified version
         # The user will have to manually make sure it's working
-        ohrm_print "Your .htaccess file could not be verified!"
-        ohrm_print "Please ensure your .htaccess file is configured correctly so that Let's Encrypt can generate the certificates!"
-        ohrm_print "You can view an example here: https://gist.github.com/devishke-orange/ac6e941cbcd48567242b3fa1e07ae1e9"
-        
-        read -rp "Once you have finished configuring, press ENTER to continue!"
-
-        ohrm_print "\n"
+        ohrm_print "Your .htaccess file could not be verified!\n"
+        ohrm_print "Please ensure your .htaccess file is configured correctly so that Let's Encrypt can generate the certificates!\n"
+        ohrm_print "You can view an example here: https://gist.github.com/devishke-orange/ac6e941cbcd48567242b3fa1e07ae1e9\n"
     fi    
+}
+
+# Function to change index.php files to maintenance.php file to prevent access during installation/upgrade
+# First argument should be string with value enable or disable
+# shellcheck disable=SC2317
+maintenance_mode() {
+    if [[ $1 = "enable" ]]; then
+        docker cp "${ASSET_DIR}/maintenance.php" orangehrm:/var/www/html
+        docker exec orangehrm mv index.php .backup
+        docker exec orangehrm cp maintenance.php index.php
+
+        docker exec orangehrm mv web/index.php web/.backup
+        docker exec orangehrm cp maintenance.php web/index.php
+
+        docker exec orangehrm mv installer/index.php installer/.backup
+        docker exec orangehrm cp maintenance.php installer/index.php
+    elif [[ $1 = "disable" ]]; then
+        docker exec orangehrm rm -f maintenance.php
+        docker exec orangehrm mv .backup index.php
+        docker exec orangehrm mv installer/.backup installer/index.php
+        docker exec orangherm mv web/.backup web/index.php
+    fi
+}
+
+# Function to enable SSL for Apache server in OrangeHRM docker container
+# No arguments needed
+# shellcheck disable=SC2317
+apache_enable_ssl() {
+    docker exec orangehrm a2enmod ssl
+
+    # docker exec orangehrm service apache2 restart exits with error on success causing the script to fail because of set -e
+    # by putting it in an if condition this is avoided
+    if docker exec orangehrm service apache2 restart; then
+        ohrm_print "The apache service did not restart properly!\n"
+        ohrm_print "Please run 'docker exec orangehrm service apache2 restart'\n"
+    fi
 }
 
 export -f print_progress_message
@@ -160,6 +188,8 @@ export -f yes_no_check
 export -f quit_if_input
 export -f ohrm_print
 export -f htaccess_ssl_configure
+export -f maintenance_mode
+export -f apache_enable_ssl
 
 # Function to run scripts.
 # Give the name of the script as the first argument

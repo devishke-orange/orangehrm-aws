@@ -8,7 +8,8 @@ services:
     volumes:
       - orangehrm-webroot:/var/www/html
       - orangehrm-cert:/etc/letsencrypt
-      - orangehrm-server:/etc/apache2
+      - orangehrm-sites-available:/etc/apache2/sites-available
+      - orangehrm-sites-enabled:/etc/apache2/sites-enabled
     networks:
       - orangehrm
     container_name: orangehrm
@@ -44,5 +45,5 @@ networks:
 volumes:
   orangehrm-webroot:
   orangehrm-cert:
-  orangehrm-server:
-  orangehrm-db:
+  orangehrm-sites-available:
+  orangehrm-sites-enabled:

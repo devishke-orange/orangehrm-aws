@@ -8,6 +8,7 @@ fi
 
 now=$(date +"%Y_%m_%d_%H_%M_%S")
 containerLogDir="/var/www/html/src/log"
+certbotLogDir="/var/log/letsencrypt"
 localLogDir="$HOME/orangehrm_logs/$now"
 
 printf "\nThis command will retrieve logs from the OrangeHRM container and store them at %s/orangehrm_logs\n\n" "$HOME"
@@ -16,6 +17,7 @@ mkdir -p "$localLogDir"
 
 print_progress_message "Copying logs" wip
 docker cp orangehrm:"$containerLogDir" "$localLogDir/ohrm_logs" --quiet
+docker cp orangehrm:"$certbotLogDir" "$localLogDir/cerbot_logs" --quiet
 cp -r "$LOG_DIR" "$localLogDir/command_logs"
 print_progress_message "Copying logs" success rewrite
 

@@ -29,6 +29,8 @@ else
     exit 1;
 fi
 
+htaccess_ssl_configure 
+
 if docker exec certbot certbot certificates | grep "No certificates found"; then
     ohrm_print "You have not generated any certificates\n"
     printf "You can run '%borangehrm ssl enable%b to generate SSL certificates'\n\n" "$GC" "$EC" >&3

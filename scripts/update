@@ -58,7 +58,10 @@ stop_existing_ohrm() {
     
     docker stop orangehrm
     docker rm orangehrm 
-    docker system prune --all --force 
+    docker stop certbot
+    docker rm certbot
+
+    docker volume rm orangehrm_orangehrm-webroot
 
     print_progress_message "Stopping OHRM container" success rewrite
 }
@@ -75,9 +78,9 @@ create_new_container() {
 
     sleep 2
 
-    docker cp "${ASSET_DIR}/maintenance.php" orangehrm:/var/www/html
-    docker exec orangehrm mv index.php BACKUP
-    docker exec orangehrm mv maintenance.php index.php
+    maintenance_mode enable
+    htaccess_ssl_configure
+    apache_enable_ssl
 
     if [[ -f "${upgradeDir}/key.ohrm" ]]; then
         docker cp "${upgradeDir}/key.ohrm" orangehrm:"${KEY_PATH}"
@@ -93,13 +96,11 @@ upgrade_ohrm() {
     source "$ENV_FILE"
     
     docker exec orangehrm php installer/console upgrade:run --dbHost mariadb1011 --dbPort 3306 --dbName orangehrm --dbUser root --dbUserPassword "${MARIADB_ROOT_PW}"
-    docker exec orangehrm rm -f index.php
-    docker exec orangehrm mv BACKUP index.php
-    
+
+    maintenance_mode disable
+
     rm -rf "${upgradeDir}"
-
     print_progress_message "Upgrading OrangeHRM" success rewrite
-
     printf "\n%bOrangeHRM was succesfully upgraded!%b\n\n" "$GC" "$EC" >&3
 }
 
