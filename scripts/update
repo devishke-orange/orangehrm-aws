@@ -57,18 +57,18 @@ copy_encryption_key() {
 stop_existing_ohrm() {
     print_progress_message "Stopping OHRM container" wip
     
-    if docker inspect orangehrm; then
-        docker stop orangehrm
-        docker rm orangehrm
+    if docker inspect "$ORANGEHRM_CONTAINER"; then
+        docker stop "$ORANGEHRM_CONTAINER"
+        docker rm "$ORANGEHRM_CONTAINER"
     fi
 
-    if docker inspect certbot; then
-        docker stop certbot
-        docker rm certbot
+    if docker inspect "$CERTBOT_CONTAINER"; then
+        docker stop "$CERTBOT_CONTAINER"
+        docker rm "$CERTBOT_CONTAINER"
     fi
 
-    if docker volume inspect orangehrm_orangehrm-webroot; then
-        docker volume rm orangehrm_orangehrm-webroot
+    if docker volume inspect "$ORANGEHRM_WEBROOT_VOLUME"; then
+        docker volume rm "$ORANGEHRM_WEBROOT_VOLUME"
     fi
 
     print_progress_message "Stopping OHRM container" success rewrite

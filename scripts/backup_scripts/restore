@@ -107,27 +107,27 @@ print_progress_message "Extracting backup" success rewrite
 
 print_progress_message "Shutting down containers" wip
 
-if docker inspect orangehrm; then
-    docker stop orangehrm
-    docker rm orangehrm
+if docker inspect "$ORANGEHRM_CONTAINER"; then
+    docker stop "$ORANGEHRM_CONTAINER"
+    docker rm "$ORANGEHRM_CONTAINER"
 fi
 
-if docker inspect certbot; then
-    docker stop certbot
-    docker rm certbot
+if docker inspect "$CERTBOT_CONTAINER"; then
+    docker stop "$CERTBOT_CONTAINER"
+    docker rm "$CERTBOT_CONTAINER"
 fi
 
-if docker inspect maraidb; then
-    docker stop mariadb
-    docker rm mariadb
+if docker inspect "$MARIADB_CONTAINER"; then
+    docker stop "$MARIADB_CONTAINER"
+    docker rm "$MARIADB_CONTAINER"
 fi
 
-if docker volume inspect orangehrm_orangehrm-webroot; then
-    docker volume rm orangehrm_orangehrm-webroot
+if docker volume inspect "$ORANGEHRM_WEBROOT_VOLUME"; then
+    docker volume rm "$ORANGEHRM_WEBROOT_VOLUME"
 fi
 
-if docker volume inspect orangehrm_orangehrm-db; then
-    docker volume rm orangehrm_orangehrm-db
+if docker volume inspect "$ORANGEHRM_DB_VOLUME"; then
+    docker volume rm "$ORANGEHRM_DB_VOLUME"
 fi
 
 print_progress_message "Shutting down containers" success rewrite

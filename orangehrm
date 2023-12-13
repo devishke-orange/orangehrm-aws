@@ -23,6 +23,12 @@ export HTACCESS_INTEGRITY_SSL=".integrity_ssl"
 export HTACCESS_INTEGRITY_ORIGINAL_FILE="$OHRM_HOME_DIR/$HTACCESS_INTEGRITY_ORIGINAL"
 export HTACCESS_INTEGRITY_SSL_FILE="$OHRM_HOME_DIR/$HTACCESS_INTEGRITY_SSL"
 
+# Docker container and volume names
+export ORANGEHRM_CONTAINER="orangehrm"
+export MARIADB_CONTAINER="mariadb"
+export CERTBOT_CONTAINER="certbot"
+export ORANGEHRM_WEBROOT_VOLUME="orangehrm_orangehrm-webroot"
+export ORANGEHRM_DB_VOLUME="orangehrm_orangehrm-db"
 
 # Create log dir
 if ! [[ -d "$LOG_DIR" ]]; then

@@ -328,6 +328,7 @@ get_config_values() {
 }
 
 write_env() {
+	rm -f "$ENV_FILE"
 	# Create a password using pwgen with the following attributes:
 	# 	32 characters long
 	#	Capital letters
@@ -340,13 +341,11 @@ create_containers() {
 	print_progress_message "Creating the containers" wip
 
 	write_env
-
-	cp "$OHRM_DIR/compose.yml" "$COMPOSE_FILE"
+	cp -f "$OHRM_DIR/compose.yml" "$COMPOSE_FILE"
 
 	docker compose --env-file "$ENV_FILE" --file "$COMPOSE_FILE" up --detach --remove-orphans
-	
-	maintenance_mode enable
 
+	maintenance_mode enable
 	print_progress_message "Creating the containers" success rewrite
 }
 
