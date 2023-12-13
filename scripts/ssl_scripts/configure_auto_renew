@@ -22,28 +22,34 @@ if docker exec certbot certbot certificates | grep "No certificates found"; then
     exit 1
 fi
 
-if [[ $UID -ne 0 ]]; then
-    print_progress_message "Checking pre-requisites" error rewrite
-    ohrm_print "Please run this script with superuser privileges\n"
-    ohrm_print "i.e. sudo orangehrm ssl configure_auto_renew\n\n"
-    exit 1
-fi
-
 print_progress_message "Checking pre-requisites" success rewrite
 
-print_progress_message "Setting up auto renewal" wip
+print_progress_message "Creating auto-renewal files" wip
 
-cp -f "SSL_RENEW_SERVICE" /etc/systemd/system
-cp -f "SSL_RENEW_TIMER" /etc/systemd/system
+cat << EOF > "$HOME/ssl_renew.service"
+[Unit]
+Description="Service to run orangehrm ssl renew"
 
-systemctl start ssl_renew.timer
-systemctl enable ssl_renew.timer
+[Service]
+ExecStart=/usr/bin/orangehrm ssl renew
+EOF
 
-if systemd-analyze verify /etc/systemd/system/ssl_renew*; then
-    print_progress_message "Setting up auto renewal" success rewrite
-    ohrm_print "SSL Auto Renewal has been configured successfully!\n\n"
-else
-    print_progress_message "Setting up auto renewal" error rewrite
-    ohrm_print "Something has gone wrong with the timers!\n"
-    ohrm_print "Please run 'systemd-analyze verify /etc/systemd/system/ssl_renew*' to check the error\n\n"
-fi
+cat << EOF > "$HOME/ssl_renew.timer"
+[Unit]
+Description="Run ssl_renew.service daily to check whether SSL certificates need to be renewed"
+
+[Timer]
+OnCalendar=*-*-* 00:00:00
+Unit=ssl_renew.service
+
+[Install]
+WantedBy=multi-user.target
+EOF
+
+print_progress_message "Creating auto-renewal files" success rewrite
+
+ohrm_print "\n"
+
+ohrm_print "You will need to move the auto-renewal files to the relevant directory\n"
+ohrm_print "Please run the following command in your terminal\n"
+printf "%bsudo mv %s /etc/systemd/system && sudo mv %s /etc/systemd/system && sudo systemctl start ssl_renew.timer && sudo systemctl enable ssl_renew.timer%b\n\n" "$GC" "$HOME/ssl_renew.service" "$HOME/ssl_renew.timer" "$EC"

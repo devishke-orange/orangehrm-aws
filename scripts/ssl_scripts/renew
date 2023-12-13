@@ -35,4 +35,4 @@ if docker exec certbot certbot certificates | grep "No certificates found"; then
     exit 0
 fi
 
-docker exec certbot certbot renew
+docker exec certbot certbot renew  >&3
