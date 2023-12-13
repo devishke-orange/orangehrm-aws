@@ -29,7 +29,7 @@ read -rp "Press ENTER to continue" 2>&3
 docker exec orangehrm chmod 400 /etc/letsencrypt
 
 tmp_dir="${OHRM_HOME_DIR}/.tmp/$(echo $RANDOM | md5sum | head -c 10)"
-mkdir "$tmp_dir"
+mkdir -p "$tmp_dir"
 
 # Determine certificate names and associated domains by using certbot certificates
 
@@ -41,7 +41,7 @@ mapfile -t certificate_names < "$tmp_dir/cert_name.txt"
 grep "    Domains: " < "$tmp_dir/cert.txt" | sed 's/    Domains: //g' | tr '\n' ' ' > "$tmp_dir/domain_name.txt"
 mapfile -t -d " " domains < "$tmp_dir/domain_name.txt"
 
-sed 's/    //g' "cert.txt"  | sed 's/  //g' | tr '\n' ',' > "$tmp_dir/cert-grep.txt"
+sed 's/    //g' "$tmp_dir/cert.txt"  | sed 's/  //g' | tr '\n' ',' > "$tmp_dir/cert-grep.txt"
 
 restart_server=false
 

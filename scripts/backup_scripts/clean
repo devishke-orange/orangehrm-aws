@@ -30,15 +30,12 @@ done
 
 quit_if_input "$NO_REGEX" "$answer" "Aborting backup clean process!"
 
-# MOVE TO EXPORT VARIABLE
-backupDir="$OHRM_DIR/backups"
-
-size="$(du -sh "$backupDir" | cut -f1)"
+size="$(du -sh "$BACKUP_DIR" | cut -f1)"
 
 printf "\n" >&3
 
 print_progress_message "Cleaning backups" wip
-rm -rf "$backupDir"
+rm -rf "$BACKUP_DIR"
 print_progress_message "Cleaning backups" success rewrite
 
 printf "\nRecovered space: %s\n\n" "$size" >&3

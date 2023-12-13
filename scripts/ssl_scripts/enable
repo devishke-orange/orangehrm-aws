@@ -29,7 +29,7 @@ if ! docker exec certbot certbot certificates | grep "No certificates found"; th
     exit 0
 fi
 
-print_progress_message "Checking for existing certificates" success
+print_progress_message "Checking for existing certificates" success rewrite
 
 print_progress_message "Preparing OrangeHRM System" wip
 
@@ -50,6 +50,7 @@ if docker exec -it certbot certbot certonly --webroot --webroot-path /var/www/ht
     docker exec orangehrm chmod 400 /etc/letsencrypt
 
     tmp_dir="${OHRM_HOME_DIR}/.tmp/$(echo $RANDOM | md5sum | head -c 10)"
+    mkdir -p "$tmp_dir"
     
     docker exec certbot certbot certificates > "$tmp_dir/cert.txt"
 
@@ -59,7 +60,7 @@ if docker exec -it certbot certbot certonly --webroot --webroot-path /var/www/ht
     grep "    Domains: " < "$tmp_dir/cert.txt" | sed 's/    Domains: //g' | tr '\n' ' ' > "$tmp_dir/domain_name.txt"
     mapfile -t -d " " domains < "$tmp_dir/domain_name.txt"
 
-    sed 's/    //g' "cert.txt"  | sed 's/  //g' | tr '\n' ',' > "$tmp_dir/cert-grep.txt"
+    sed 's/    //g' "$tmp_dir/cert.txt"  | sed 's/  //g' | tr '\n' ',' > "$tmp_dir/cert-grep.txt"
 
     for domain in "${domains[@]}"; do
         for cert_name in "${certificate_names[@]}"; do
@@ -75,14 +76,7 @@ if docker exec -it certbot certbot certonly --webroot --webroot-path /var/www/ht
     done    
 
     docker exec orangehrm rm -f /etc/apache2/sites-enabled/000-default.conf
-    docker exec orangehrm a2enmod ssl
-    
-    # docker exec orangehrm service apache2 restart exits with error on success causing the script to fail because of set -e
-    # by putting it in an if condition this is avoided
-    if docker exec orangehrm service apache2 restart; then
-        ohrm_print "The apache service did not restart properly!\n"
-        ohrm_print "Please run 'docker exec orangehrm service apache2 restart'\n"
-    fi
+    apache_enable_ssl
 
     # Remove tmp directory
     rm -rf "$tmp_dir"
