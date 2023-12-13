@@ -42,7 +42,7 @@ ohrm_print "\n"
 ohrm_print "Your OrangeHRM instance is now prepared for SSL certificate generation\n"
 ohrm_print "The OrangeHRM command line utility will now run Certbot\n\n"
 
-if docker exec certbot certbot certonly --webroot --webroot-path /var/www/html >&3; then
+if docker exec -it certbot certbot certonly --webroot --webroot-path /var/www/html >&3; then
     print_progress_message "Certificates generated" success
     print_progress_message "Preparing server" wip
 

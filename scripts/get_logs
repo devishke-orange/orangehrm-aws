@@ -17,7 +17,7 @@ mkdir -p "$localLogDir"
 
 print_progress_message "Copying logs" wip
 docker cp orangehrm:"$containerLogDir" "$localLogDir/ohrm_logs" --quiet
-docker cp orangehrm:"$certbotLogDir" "$localLogDir/cerbot_logs" --quiet
+docker cp certbot:"$certbotLogDir" "$localLogDir/cerbot_logs" --quiet
 cp -r "$LOG_DIR" "$localLogDir/command_logs"
 print_progress_message "Copying logs" success rewrite
 
