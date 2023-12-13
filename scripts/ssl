@@ -27,8 +27,7 @@ err_exit() {
 
 if [[ $# -eq 0 ]]; then
     # If no arguments
-    printf "SSL help message here\n" >&3
-    # ohrm_ssl_script ssl_help
+     ohrm_ssl_script ssl_help
 else
     case $1 in
         help)

@@ -88,7 +88,7 @@ if docker exec -it certbot certbot certonly --webroot --webroot-path /var/www/ht
 
     ohrm_print "You can now access OrangeHRM at the following domains:\n"
     for domain in "${domains[@]}"; do
-      printf "%s %b%s%b\n" "-" "$GC" "$domain" "$EC" >&3
+      printf "%s https://%b%s%b\n" "-" "$GC" "$domain" "$EC" >&3
     done
 
     ohrm_print "\n"
