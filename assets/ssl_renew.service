@@ -1,0 +1,5 @@
+[Unit]
+Description="Service to run orangehrm ssl renew"
+
+[Service]
+ExecStart=/usr/bin/orangehrm ssl renew

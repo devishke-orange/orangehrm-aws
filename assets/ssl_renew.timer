@@ -1,0 +1,9 @@
+[Unit]
+Description="Run ssl_renew.service daily to check whether SSL certificates need to be renewed"
+
+[Timer]
+OnCalendar=*-*-* 00:00:00
+Unit=ssl_renew.service
+
+[Install]
+WantedBy=multi-user.target

@@ -411,8 +411,12 @@ write_install_file() {
 }
 
 enable_ssl_mod() {
+	# Calculate md5sum of .htaccess files and store for SSL checks
+	docker exec orangehrm md5sum .htaccess > "$HTACCESS_INTEGRITY_ORIGINAL_FILE"
 	docker exec orangehrm sed -i "3 d" /var/www/html/.htaccess
 	docker exec orangehrm sed -i '2 a RedirectMatch 404 /(?!\\.well\\-known)\\..*$' /var/www/html/.htaccess
+	docker exec orangehrm md5sum .htaccess > "$HTACCESS_INTEGRITY_SSL_FILE"
+
 	docker exec orangehrm a2enmod ssl
 	if docker exec orangehrm service apache2 restart; then
         ohrm_print "The apache service did not restart properly!\n"

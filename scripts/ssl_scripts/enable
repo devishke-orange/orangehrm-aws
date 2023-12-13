@@ -23,8 +23,9 @@ ohrm_print "\n"
 print_progress_message "Checking for existing certificates" wip
 
 if ! docker exec certbot certbot certificates | grep "No certificates found"; then
+    print_progress_message "Checking for existing certificates" error rewrite
     ohrm_print "You already have some generated certificates available for use.\n"
-    docker run -it --rm --name certbot --mount source=orangehrm_orangehrm-cert,target=/etc/letsencrypt certbot/certbot certificates >&3
+    docker exec certbot certbot certificates >&3
     exit 0
 fi
 
@@ -32,8 +33,7 @@ print_progress_message "Checking for existing certificates" success
 
 print_progress_message "Preparing OrangeHRM System" wip
 
-docker exec orangehrm sed -i "3 d" /var/www/html/.htaccess
-docker exec orangehrm sed -i '2 a RedirectMatch 404 /(?!\\.well\\-known)\\..*$' /var/www/html/.htaccess
+htaccess_ssl_configure
 
 print_progress_message "Preparing OrangeHRM System" success rewrite
 
@@ -63,12 +63,13 @@ if docker exec certbot certbot certonly --webroot --webroot-path /var/www/html >
 
     for domain in "${domains[@]}"; do
         for cert_name in "${certificate_names[@]}"; do
-            grep_output="$(grep -o "Certificate Name: $cert_name,[^,]*,[^,]*,Domains: [^,]*$domain" "$tmp_dir/cert-grep.txt")"
-            if [[ -n $grep_output ]]; then
-                docker cp "$SSL_CONF_FILE" "orangehrm:/etc/apache2/sites-available/$domain.conf"
-                docker exec orangehrm sed -i "s/YOUR_SERVER_NAME/$domain/g" "/etc/apache2/sites-available/$domain.conf"
-                docker exec orangehrm sed -i "s/YOUR_CERT_NAME/$cert_name/g" "/etc/apache2/sites-available/$domain.conf"
-                docker exec orangehrm ln -s "../sites-available/$domain.conf" "/etc/apache2/sites-enabled/$domain.conf"
+            if grep -o "Certificate Name: $cert_name,[^,]*,[^,]*,Domains: [^,]*$domain" "$tmp_dir/cert-grep.txt"; then
+                if ! docker exec orangehrm find "/etc/apache2/sites-enabled/$domain.conf"; then
+                    docker cp "$SSL_CONF_FILE" "orangehrm:/etc/apache2/sites-available/$domain.conf"
+                    docker exec orangehrm sed -i "s/YOUR_SERVER_NAME/$domain/g" "/etc/apache2/sites-available/$domain.conf"
+                    docker exec orangehrm sed -i "s/YOUR_CERT_NAME/$cert_name/g" "/etc/apache2/sites-available/$domain.conf"
+                    docker exec orangehrm ln -s "../sites-available/$domain.conf" "/etc/apache2/sites-enabled/$domain.conf"
+                fi
             fi
         done
     done    

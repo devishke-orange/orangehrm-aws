@@ -16,10 +16,16 @@ export COMPOSE_FILE="$OHRM_HOME_DIR/compose.yml"
 export ENV_FILE="$OHRM_HOME_DIR/.env"
 export INSTALL_FILE="$OHRM_HOME_DIR/.installed"
 
-# SSL files and directories
+# SSL files, directories & variables
 export WEBROOT_DIR="$OHRM_HOME_DIR/.webroot"
 export SSL_DIR="$OHRM_HOME_DIR/.ssl"
 export SSL_CONF_FILE="$ASSET_DIR/ssl.conf"
+export HTACCESS_INTEGRITY_ORIGINAL=".integrity_original"
+export HTACCESS_INTEGRITY_SSL=".integrity_ssl"
+export HTACCESS_INTEGRITY_ORIGINAL_FILE="$OHRM_HOME_DIR/$HTACCESS_INTEGRITY_ORIGINAL"
+export HTACCESS_INTEGRITY_SSL_FILE="$OHRM_HOME_DIR/$HTACCESS_INTEGRITY_SSL"
+export SSL_RENEW_SERVICE="$ASSET_DIR/ssl_renew.service"
+export SSL_RENEW_TIMER="$ASSET_DIR/ssl_renew.timer"
 
 
 # Create log dir
@@ -121,10 +127,39 @@ ohrm_print() {
     printf "%b" "$1" >&3
 }
 
+# SSL helper function prepare the .htaccess file for ACME challenges
+# No arguments need to be passed
+# shellcheck disable=SC2317
+htaccess_ssl_configure() {
+    if find "$HTACCESS_INTEGRITY_SSL_FILE"; then
+        docker cp "$HTACCESS_INTEGRITY_SSL_FILE" orangehrm:/var/www/html
+    fi
+
+    if find "$HTACCESS_INTEGRITY_ORIGINAL_FILE"; then
+        docker cp "$HTACCESS_INTEGRITY_ORIGINAL_FILE" orangehrm:/var/www/html
+    fi
+
+    if docker exec orangehrm md5sum -c "$HTACCESS_INTEGRITY_ORIGINAL"; then
+        docker exec orangehrm sed -i "3 d" /var/www/html/.htaccess
+        docker exec orangehrm sed -i '2 a RedirectMatch 404 /(?!\\.well\\-known)\\..*$' /var/www/html/.htaccess
+    elif ! docker exec orangehrm md5sum -c "$HTACCESS_INTEGRITY_SSL"; then
+        # If this point has reached, then the .htaccess file does not match both the original and ssl modified version
+        # The user will have to manually make sure it's working
+        ohrm_print "Your .htaccess file could not be verified!"
+        ohrm_print "Please ensure your .htaccess file is configured correctly so that Let's Encrypt can generate the certificates!"
+        ohrm_print "You can view an example here: https://gist.github.com/devishke-orange/ac6e941cbcd48567242b3fa1e07ae1e9"
+        
+        read -rp "Once you have finished configuring, press ENTER to continue!"
+
+        ohrm_print "\n"
+    fi    
+}
+
 export -f print_progress_message
 export -f yes_no_check
 export -f quit_if_input
 export -f ohrm_print
+export -f htaccess_ssl_configure
 
 # Function to run scripts.
 # Give the name of the script as the first argument

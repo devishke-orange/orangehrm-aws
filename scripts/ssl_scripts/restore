@@ -14,7 +14,7 @@ ohrm_print "This tool assists you with restoring your SSL configuration\n\n"
 
 print_progress_message "Checking for existing certificates" wip
 
-if docker run -it --rm --name certbot --mount source=orangehrm_orangehrm-cert,target=/etc/letsencrypt certbot/certbot certificates | grep "No certificates found"; then
+if docker exec certbot certbot certificates | grep "No certificates found"; then
     ohrm_print "You have not generated any certificates\n"
     printf "You can run '%borangehrm ssl enable%b'\n\n" "$GC" "$EC" >&3
     exit 0
@@ -43,10 +43,13 @@ mapfile -t -d " " domains < "$tmp_dir/domain_name.txt"
 
 sed 's/    //g' "cert.txt"  | sed 's/  //g' | tr '\n' ',' > "$tmp_dir/cert-grep.txt"
 
+restart_server=false
+
 for domain in "${domains[@]}"; do
     for cert_name in "${certificate_names[@]}"; do
         if grep -o "Certificate Name: $cert_name,[^,]*,[^,]*,Domains: [^,]*$domain" "$tmp_dir/cert-grep.txt"; then
             if ! docker exec orangehrm find "/etc/apache2/sites-enabled/$domain.conf"; then
+                restart_server=true
                 docker cp "$SSL_CONF_FILE" "orangehrm:/etc/apache2/sites-available/$domain.conf"
                 docker exec orangehrm sed -i "s/YOUR_SERVER_NAME/$domain/g" "/etc/apache2/sites-available/$domain.conf"
                 docker exec orangehrm sed -i "s/YOUR_CERT_NAME/$cert_name/g" "/etc/apache2/sites-available/$domain.conf"
@@ -59,4 +62,21 @@ for domain in "${domains[@]}"; do
     done
 done
 
-ohrm_print "\n"
+if [[ $restart_server = "true" ]]; then
+    htaccess_ssl_configure
+    docker exec orangehrm a2enmod ssl
+
+    # docker exec orangehrm service apache2 restart exits with error on success causing the script to fail because of set -e
+    # by putting it in an if condition this is avoided
+    if docker exec orangehrm service apache2 restart; then
+    ohrm_print "The apache service did not restart properly!\n"
+    ohrm_print "Please run 'docker exec orangehrm service apache2 restart'\n"
+    fi
+
+    ohrm_print "Your server configurations have been restored!\n"
+else
+    ohrm_print "There are no configurations to restore!\n"
+fi
+
+# Remove tmp directory
+rm -rf "$OHRM_HOME_DIR/.tmp"
