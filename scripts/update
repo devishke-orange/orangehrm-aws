@@ -11,17 +11,18 @@ if [[ -z  $OHRM_DIR ]]; then
 fi
 
 answer=""
-newVersion=""
-upgradeDir="${OHRM_HOME_DIR}/.upgrade/$(echo $RANDOM | md5sum | head -c 10)"
+new_version=""
+upgrade_dir="${OHRM_HOME_DIR}/.upgrade/$(echo $RANDOM | md5sum | head -c 10)"
+update_url=https://raw.githubusercontent.com/devishke-orange/orangehrm-aws/main/compose.yml
 KEY_PATH="/var/www/html/lib/confs/cryptokeys/key.ohrm"
 
 check_version() {
     # shellcheck source=/home/ec2-user/.orangehrm/.installed
     source "$INSTALL_FILE"
 
-    newVersion=$(curl --silent https://raw.githubusercontent.com/devishke-orange/orangehrm-aws/main/compose.yml | grep "    image: orangehrm/orangehrm:" | sed 's/    image: orangehrm\/orangehrm://')
+    new_version=$(curl --silent "$update_url" | grep "    image: orangehrm/orangehrm:" | sed 's/    image: orangehrm\/orangehrm://')
 
-    if [[ "${OHRM_VERSION}" = "${newVersion}" ]]; then
+    if [[ "${OHRM_VERSION}" = "${new_version}" ]]; then
         printf "\n%bOrangeHRM is up to date!%b\n" "$GC" "$EC" >&3
         exit 0;
     fi
@@ -48,20 +49,27 @@ create_backup() {
 
 copy_encryption_key() {
     if docker exec orangehrm find "${KEY_PATH}"; then
-        mkdir -p "${upgradeDir}"
-        docker cp orangehrm:"${KEY_PATH}" "${upgradeDir}" --quiet
+        mkdir -p "${upgrade_dir}"
+        docker cp orangehrm:"${KEY_PATH}" "${upgrade_dir}" --quiet
     fi
 }
 
 stop_existing_ohrm() {
     print_progress_message "Stopping OHRM container" wip
     
-    docker stop orangehrm
-    docker rm orangehrm 
-    docker stop certbot
-    docker rm certbot
+    if docker inspect orangehrm; then
+        docker stop orangehrm
+        docker rm orangehrm
+    fi
 
-    docker volume rm orangehrm_orangehrm-webroot
+    if docker inspect certbot; then
+        docker stop certbot
+        docker rm certbot
+    fi
+
+    if docker volume inspect orangehrm_orangehrm-webroot; then
+        docker volume rm orangehrm_orangehrm-webroot
+    fi
 
     print_progress_message "Stopping OHRM container" success rewrite
 }
@@ -69,7 +77,7 @@ stop_existing_ohrm() {
 create_new_container() {
     print_progress_message "Downloading new compose file" wip
     rm -f "$COMPOSE_FILE"
-    curl https://raw.githubusercontent.com/devishke-orange/orangehrm-aws/main/compose.yml > "$COMPOSE_FILE"
+    curl "$update_url" > "$COMPOSE_FILE"
     print_progress_message "Downloading new compose file" success rewrite
 
     print_progress_message "Starting the new container" wip
@@ -82,8 +90,8 @@ create_new_container() {
     htaccess_ssl_configure
     apache_enable_ssl
 
-    if [[ -f "${upgradeDir}/key.ohrm" ]]; then
-        docker cp "${upgradeDir}/key.ohrm" orangehrm:"${KEY_PATH}"
+    if [[ -f "${upgrade_dir}/key.ohrm" ]]; then
+        docker cp "${upgrade_dir}/key.ohrm" orangehrm:"${KEY_PATH}"
     fi
 
     print_progress_message "Starting the new container" success rewrite
@@ -99,9 +107,9 @@ upgrade_ohrm() {
 
     maintenance_mode disable
 
-    rm -rf "${upgradeDir}"
+    rm -rf "${upgrade_dir}"
     print_progress_message "Upgrading OrangeHRM" success rewrite
-    printf "\n%bOrangeHRM was succesfully upgraded!%b\n\n" "$GC" "$EC" >&3
+    printf "\n%bOrangeHRM was succesfully upgraded to %s!%b\n\n" "$GC" "$new_version" "$EC" >&3
 }
 
 update_install_file() {
@@ -109,7 +117,7 @@ update_install_file() {
         printf "#!/bin/bash\n\n"
         printf "# DO NOT DELETE THIS FILE!\n"
         printf "# This file contains information about the installed version of OrangeHRM\n\n"
-        printf "export OHRM_VERSION=%s" "$newVersion"
+        printf "export OHRM_VERSION=%s" "$new_version"
     } > "$INSTALL_FILE"
 }
 
