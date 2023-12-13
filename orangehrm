@@ -153,19 +153,19 @@ htaccess_ssl_configure() {
 maintenance_mode() {
     if [[ $1 = "enable" ]]; then
         docker cp "${ASSET_DIR}/maintenance.php" orangehrm:/var/www/html
-        docker exec orangehrm mv index.php .backup
-        docker exec orangehrm cp maintenance.php index.php
+        docker exec orangehrm mv /var/www/html/index.php /var/www/html/.backup
+        docker exec orangehrm cp /var/www/html/maintenance.php /var/www/html/index.php
 
-        docker exec orangehrm mv web/index.php web/.backup
-        docker exec orangehrm cp maintenance.php web/index.php
+        docker exec orangehrm mv /var/www/html/web/index.php /var/www/html/web/.backup
+        docker exec orangehrm cp /var/www/html/maintenance.php /var/www/html/web/index.php
 
-        docker exec orangehrm mv installer/index.php installer/.backup
-        docker exec orangehrm cp maintenance.php installer/index.php
+        docker exec orangehrm mv /var/www/html/installer/index.php /var/www/html/installer/.backup
+        docker exec orangehrm cp /var/www/html/maintenance.php /var/www/html/installer/index.php
     elif [[ $1 = "disable" ]]; then
-        docker exec orangehrm rm -f maintenance.php
-        docker exec orangehrm mv .backup index.php
-        docker exec orangehrm mv installer/.backup installer/index.php
-        docker exec orangherm mv web/.backup web/index.php
+        docker exec orangehrm rm -f /var/www/html/maintenance.php
+        docker exec orangehrm mv /var/www/html/.backup /var/www/html/index.php
+        docker exec orangehrm mv /var/www/html/installer/.backup /var/www/html/installer/index.php
+        docker exec orangehrm mv /var/www/html/web/.backup /var/www/html/web/index.php
     fi
 }
 
@@ -180,6 +180,9 @@ apache_enable_ssl() {
     if docker exec orangehrm service apache2 restart; then
         ohrm_print "The apache service did not restart properly!\n"
         ohrm_print "Please run 'docker exec orangehrm service apache2 restart'\n"
+    else
+        # Since container is restarting, sleep before continuing any operation
+        sleep 2
     fi
 }
 

@@ -133,13 +133,10 @@ apache_enable_ssl
 print_progress_message "Starting containers" success rewrite
 
 print_progress_message "Restoring OrangeHRM config" wip
-docker cp "$ASSET_DIR/maintenance.php" orangehrm:/var/www/html --quiet
-docker exec orangehrm mv index.php BACKUP
-docker exec orangehrm mv maintenance.php index.php
 
-docker cp "$extractDir/Conf.php" orangehrm:/var/www/html/lib/confs/Conf.php --quiet
+docker cp "$extractDir/Conf.php" orangehrm:/var/www/html/lib/confs/Conf.php
 if [[ -f "$extractDir/key.ohrm" ]]; then
-    docker cp "$extractDir/key.ohrm" orangehrm:/var/www/html/lib/confs/cryptokeys/key.ohrm --quiet
+    docker cp "$extractDir/key.ohrm" orangehrm:/var/www/html/lib/confs/cryptokeys/key.ohrm
 fi
 print_progress_message "Restoring OrangeHRM config" success rewrite
 

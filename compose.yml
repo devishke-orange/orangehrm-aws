@@ -47,3 +47,4 @@ volumes:
   orangehrm-cert:
   orangehrm-sites-available:
   orangehrm-sites-enabled:
+  orangehrm-db:
