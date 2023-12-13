@@ -32,8 +32,7 @@ if [[ $# -eq 0 ]]; then
 else
     case $1 in
         help)
-            printf "SSL help message here\n" >&3
-            # ohrm_ssl_script ssl_help
+            ohrm_ssl_script ssl_help
             ;;
         enable)
             ohrm_ssl_script enable

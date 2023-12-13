@@ -30,20 +30,18 @@ print_progress_message "Wiping OrangeHRM data" wip
 
 docker compose -f "$COMPOSE_FILE" down
 docker system prune -af
-if docker volume inspect orangehrm_orangehrm-data; then
-    docker volume rm orangehrm_orangehrm-data
-fi
 
 print_progress_message "Wiping OrangeHRM data" success rewrite
 
 print_progress_message "Removing OrangeHRM volumes" wip
-if docker volume inspect orangehrm_orangehrm-webroot; then
-    docker volume rm orangehrm_orangehrm-webroot
+if docker volume inspect "$ORANGEHRM_WEBROOT_VOLUME"; then
+    docker volume rm "$ORANGEHRM_WEBROOT_VOLUME"
 fi
 
-if docker volume inspect orangehrm_orangehrm-db; then
-    docker volume rm orangehrm_orangehrm-db
+if docker volume inspect "$ORANGEHRM_DB_VOLUME"; then
+    docker volume rm "$ORANGEHRM_DB_VOLUME"
 fi
+
 print_progress_message "Removing OrangeHRM volumes" success rewrite
 
 print_progress_message "Removing OrangeHRM files" wip

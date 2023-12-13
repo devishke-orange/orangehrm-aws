@@ -16,7 +16,7 @@ ohrm_print "In order to generate SSL certificates, the OrangeHRM command line ut
 ohrm_print "Certbot is a free, open source software tool for automatically using Let's Encrypt certificates on manually-administrated websites to enable HTTPS.\n"
 ohrm_print "To learn more about certbot, please visit https://certbot.eff.org/\n\n"
 
-read -rp "Press ENTER to to continue" 2>&3
+read -rp "Press ENTER to continue" 2>&3
 
 ohrm_print "\n"
 
@@ -86,11 +86,16 @@ if docker exec -it certbot certbot certonly --webroot --webroot-path /var/www/ht
 
     print_progress_message "Preparing server" success rewrite
 
-    printf "You can now access OrangeHRM at %bhttps://%s%b\n\n" "$GC" "$domain" "$EC" >&3
+    ohrm_print "You can now access OrangeHRM at the following domains:\n"
+    for domain in "${domains[@]}"; do
+      printf "%s %b%s%b\n" "-" "$GC" "$domain" "$EC" >&3
+    done
+
+    ohrm_print "\n"
+
+    printf "To configure auto-renewal of your SSL certificates, please run '%borangehrm ssl configure-auto-renew%b' from your terminal\n\n" "$GC" "$EC" >&3
 else
     ohrm_print "Something went wrong! Please try again\n\n"
 fi
 
 ohrm_print "\n"
-
-ohrm_print "Add section about renewing certificates"
