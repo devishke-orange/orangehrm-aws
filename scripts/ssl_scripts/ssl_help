@@ -17,16 +17,16 @@ print_help_message() {
 tput bold
 printf "\nOrangeHRM SSL Command\n\n"
 tput sgr0
-printf "This command allows you to manage SSL certificates for your OrangeHRM AWS Instance.\n"
+printf "This command allows you to manage SSL certificates for your OrangeHRM AWS Instance.\n\n"
 echo "Usage:"
 print_help_message "  orangehrm ssl help" "Display this message.\n"
 print_help_message "  orangehrm ssl enable" "Enable SSL on a newly installed instance. This command will not work if you have already generated SSL certificates.\n"
 print_help_message "  orangehrm ssl restore" "Restore server configurations for your generated certificates.\n"
 print_help_message "  orangehrm ssl renew" "Renew your SSL certificates.\n"
-print_help_message "  orangehrm ssl configure-auto-renew" "Generate a script to auto-renew your SSL certificates.\n"
+print_help_message "  orangehrm ssl auto-renew" "Generate a script to auto-renew your SSL certificates.\n\n"
 
 printf "The SSL command utility relies upon Certbot for SSL certificate generation\n"
 printf "Certbot is a free, open source software tool for automatically using Let's Encrypt certificates on manually-administrated websites to enable HTTPS.\n"
-printf "To learn more about certbot, please visit https://certbot.eff.org/\n"
+printf "To learn more about certbot, please visit https://certbot.eff.org/\n\n"
 
-printf "\nFor any further concerns, you can contact us at ossupport@orangehrm.com\n\n"
+printf "For any further concerns, you can contact us at ossupport@orangehrm.com\n\n"

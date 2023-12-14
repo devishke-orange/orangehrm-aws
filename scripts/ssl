@@ -34,16 +34,20 @@ else
             ohrm_ssl_script ssl_help
             ;;
         enable)
+            trap 'err_exit orangehrm_ssl_enable.log' ERR
             ohrm_ssl_script enable
             ;;
         restore)
+            trap 'err_exit orangehrm_ssl_restore.log' ERR
             ohrm_ssl_script restore
             ;;
         renew)
+            trap 'err_exit orangehrm_ssl_renew.log' ERR
             ohrm_ssl_script renew
             ;;
-        configure-auto-renew)
-            ohrm_ssl_script configure_auto_renew
+        auto-renew)
+            trap 'err_exit orangehrm_ssl_auto_renew.log' ERR
+            ohrm_ssl_script auto_renew
             ;;
         *)
             printf "\n%b%s%b is not an orangehrm ssl commmand\n" "$RC" "$1" "$EC" >&3

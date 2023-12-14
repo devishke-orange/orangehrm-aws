@@ -55,6 +55,6 @@ ohrm_print "All data related to orangehrm has been wiped!\n\n"
 printf "Your log files have been stored at %s\n" "$HOME/ohrm_logs_$(date +"%Y_%m_%d_%H_%M_%S")" >&3
 printf "To reinstall the system please run '%borangehrm install%b'\n\n" "$GC" "$EC" >&3
 
-ohrm_print "NOTE: Generated SSL certificates and server configurations have not been removed\n"
+ohrm_print "NOTE: Generated SSL certificates and server configurations have not been removed\n\n"
 
 exit 0

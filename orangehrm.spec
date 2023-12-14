@@ -60,7 +60,7 @@ chown -R ec2-user:ec2-user %{buildroot}/opt/%{name}
 /opt/orangehrm/scripts/ssl_scripts/enable
 /opt/orangehrm/scripts/ssl_scripts/restore
 /opt/orangehrm/scripts/ssl_scripts/renew
-/opt/orangehrm/scripts/ssl_scripts/configure_auto_renew
+/opt/orangehrm/scripts/ssl_scripts/auto_renew
 /etc/profile.d/login_orangehrm.sh
 /opt/orangehrm/compose.yml
 

@@ -16,19 +16,21 @@ if [[ ! -d "$BACKUP_DIR" || -z "$(ls -A "$BACKUP_DIR")" ]]; then
     exit 0
 fi
 
-printf "\nA list of your existing backups is given below:\n\n" >&3
+ohrm_print "\n"
+ohrm_print "A list of your existing backups is given below:\n\n"
 
 backups=("$BACKUP_DIR"/*)
 
-printf "=========================================\n" >&3
-printf "No.\tVer.\tDate\t\tTime\n" >&3
-printf "=========================================\n" >&3
+ohrm_print "=========================================\n"
+ohrm_print "No.\tVer.\tDate\t\tTime\n"
+ohrm_print "=========================================\n"
 # List Backups
 for index in "${!backups[@]}"; do
     # shellcheck disable=SC1091
     source "${backups[index]}/.metadata"
     printf "%d\t%s\t%s\t%s\n" "$((index+1))" "$BACKUP_VERSION" "$DATE_OF_BACKUP" "$TIME_OF_BACKUP" >&3
-    printf "=========================================\n" >&3
+    ohrm_print "=========================================\n"
 done
 
-printf "\nTo restore one of these backups, please run '%borangehrm backup restore%b'\n\n" "$GC" "$EC" >&3
+ohrm_print "\n"
+ohrm_print "To restore one of these backups, please run '%borangehrm backup restore%b'\n\n" "$GC" "$EC" >&3

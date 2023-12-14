@@ -13,7 +13,8 @@ fi
 dateOfBck=$(date +"%Y/%m/%d")
 timeOfBck=$(date +"%H:%M:%S")
 
-printf "\nA backup of your database, configuration file and compose file will be created\n\n" >&3
+ohrm_print "\n"
+ohrm_print "A backup of your database, configuration file and compose file will be created\n\n"
 print_progress_message "Creating Backup" wip
 
 # shellcheck source=/home/ec2-user/.orangehrm/.env

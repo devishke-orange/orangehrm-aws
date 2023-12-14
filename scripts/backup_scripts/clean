@@ -16,7 +16,9 @@ if [[ ! -d "$BACKUP_DIR" || -z "$(ls -A "$BACKUP_DIR")" ]]; then
     exit 0
 fi
 
-printf "\n%bWARNING%b: This will delete all existing backups!\n\n" "$RC" "$EC" >&3
+ohrm_print "\n"
+
+printf "%bWARNING%b: This will delete all existing backups!\n\n" "$RC" "$EC" >&3
 
 answer="no"
 
@@ -24,7 +26,7 @@ printf "Are you sure you want to continue %b[yes/no]%b\n" "$YC" "$EC" >&3
 read -rp "> " answer 2>&3
 
 while ! yes_no_check "$answer"; do
-    printf "Please enter yes or no\n" >&3
+    ohrm_print "Please enter yes or no\n"
     read -rp "> " answer 2>&3
 done
 
@@ -32,10 +34,13 @@ quit_if_input "$NO_REGEX" "$answer" "Aborting backup clean process!"
 
 size="$(du -sh "$BACKUP_DIR" | cut -f1)"
 
-printf "\n" >&3
+ohrm_print "\n"
 
 print_progress_message "Cleaning backups" wip
 rm -rf "$BACKUP_DIR"
 print_progress_message "Cleaning backups" success rewrite
 
-printf "\nRecovered space: %s\n\n" "$size" >&3
+ohrm_print "\n"
+printf "Recovered space: %s\n\n" "$size" >&3
+
+ohrm_print "Your OrangeHRM backups have been deleted!\n\n"
