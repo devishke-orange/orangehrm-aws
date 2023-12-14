@@ -6,9 +6,6 @@ if [[ "$UID" -eq 0 ]]; then
   exit 1
 fi
 
-exec 3>&1 1>>"$LOG_DIR/orangehrm.log" 2>&1
-set -x
-
 # Script and asset directories
 export OHRM_DIR=/opt/orangehrm
 export SCRIPT_DIR="$OHRM_DIR/scripts"
@@ -48,6 +45,9 @@ fi
 if ! [[ -d "$BACKUP_DIR" ]]; then
     mkdir -p "$BACKUP_DIR"
 fi
+
+exec 3>&1 1>>"$LOG_DIR/orangehrm.log" 2>&1
+set -x
 
 # Exporting colours
 #   RC = red colour + bold
