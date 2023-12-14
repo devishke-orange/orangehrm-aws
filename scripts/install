@@ -18,9 +18,6 @@ fi
 password=""
 answer="no"
 
-# shellcheck disable=SC1091
-source "$HELPER_SCRIPTS_DIR/countries"
-
 check_prereq () {
 	print_progress_message "Checking pre-requisites" wip
 
