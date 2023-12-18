@@ -134,9 +134,19 @@ print_progress_message "Copying config files" success rewrite
 
 
 print_progress_message "Starting containers" wip
-docker compose --file "$COMPOSE_FILE" up --detach --remove-orphans
+
+# shellcheck source=/home/ec2-user/.orangehrm/.env
+source "$ENV_FILE"
+db_pw_decrypt="$(echo "$MARIADB_ROOT_PW" | base64 -d)"
+
+# Create temporary env with decrypted password
+printf "MARIADB_ROOT_PW=%s" "$db_pw_decrypt" > "$ENV_FILE.tmp"
+
+docker compose --env-file "$ENV_FILE.tmp" --file "$COMPOSE_FILE" up --detach --remove-orphans
+
 maintenance_mode enable
 apache_enable_ssl
+rm -f "$ENV_FILE.tmp"
 
 print_progress_message "Starting containers" success rewrite
 
@@ -150,9 +160,6 @@ print_progress_message "Restoring OrangeHRM config" success rewrite
 
 print_progress_message "Restoring database records" wip
 sleep 5
-# shellcheck source=/home/ec2-user/.orangehrm/.env
-source "$ENV_FILE"
-db_pw_decrypt="$(echo "$MARIADB_ROOT_PW" | base64 -d)"
 
 docker exec -i mariadb sh -c "exec mariadb -uroot -p$db_pw_decrypt" < "$extractDir/mariadb.sql"
 print_progress_message "Restoring database records" success rewrite
