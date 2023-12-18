@@ -140,12 +140,20 @@ write_env() {
 create_containers() {
 	print_progress_message "Creating the containers" wip
 
-	write_env
 	cp -f "$OHRM_DIR/compose.yml" "$COMPOSE_FILE"
 
-	docker compose --env-file "$ENV_FILE" --file "$COMPOSE_FILE" up --detach --remove-orphans
+  write_env
+  # shellcheck source=/home/ec2-user/.orangehrm/.env
+  source "$ENV_FILE"
+
+  # Create temporary env with decrypted password
+  printf "MARIADB_ROOT_PW=%s" "$(echo "$MARIADB_ROOT_PW" | base64 -d)" > "$ENV_FILE.tmp"
+
+  # Start other containers
+	docker compose --env-file "$ENV_FILE.tmp" --file "$COMPOSE_FILE" up --detach --remove-orphans
 
 	maintenance_mode enable
+	rm -f "$ENV_FILE.tmp"
 	print_progress_message "Creating the containers" success rewrite
 }
 
