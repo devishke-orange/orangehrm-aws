@@ -102,8 +102,10 @@ upgrade_ohrm() {
 
     # shellcheck source=/home/ec2-user/.orangehrm/.env
     source "$ENV_FILE"
+    local db_pw_decrypt
+    db_pw_decrypt="$(echo "$MARIADB_ROOT_PW" | base64 -d)"
     
-    docker exec orangehrm php installer/console upgrade:run --dbHost mariadb1011 --dbPort 3306 --dbName orangehrm --dbUser root --dbUserPassword "${MARIADB_ROOT_PW}"
+    docker exec orangehrm php installer/console upgrade:run --dbHost mariadb1011 --dbPort 3306 --dbName orangehrm --dbUser root --dbUserPassword "${db_pw_decrypt}"
 
     maintenance_mode disable
 
