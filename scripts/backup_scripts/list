@@ -33,4 +33,4 @@ for index in "${!backups[@]}"; do
 done
 
 ohrm_print "\n"
-ohrm_print "To restore one of these backups, please run '%borangehrm backup restore%b'\n\n" "$GC" "$EC" >&3
+printf "To restore one of these backups, please run '%borangehrm backup restore%b'\n\n" "$GC" "$EC" >&3

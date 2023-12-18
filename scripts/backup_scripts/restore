@@ -152,7 +152,9 @@ print_progress_message "Restoring database records" wip
 sleep 5
 # shellcheck source=/home/ec2-user/.orangehrm/.env
 source "$ENV_FILE"
-docker exec -i mariadb sh -c "exec mariadb -uroot -p$MARIADB_ROOT_PW" < "$extractDir/mariadb.sql"
+db_pw_decrypt="$(echo "$MARIADB_ROOT_PW" | base64 -d)"
+
+docker exec -i mariadb sh -c "exec mariadb -uroot -p$db_pw_decrypt" < "$extractDir/mariadb.sql"
 print_progress_message "Restoring database records" success rewrite
 
 rm -rf "$extractDir"
