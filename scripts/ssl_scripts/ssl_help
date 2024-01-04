@@ -12,8 +12,6 @@ print_help_message() {
     printf "%-30b %b" "$1" "$2"
 }
 
-# TODO: write a detailed help message. mention certbot usage
-
 tput bold
 printf "\nOrangeHRM SSL Command\n\n"
 tput sgr0

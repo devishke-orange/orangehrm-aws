@@ -88,12 +88,12 @@ if docker exec -it certbot certbot certonly --webroot --webroot-path /var/www/ht
 
     ohrm_print "You can now access OrangeHRM at the following domains:\n"
     for domain in "${domains[@]}"; do
-      printf "%s https://%b%s%b\n" "-" "$GC" "$domain" "$EC" >&3
+      printf "%s %bhttps://%s%b\n" "-" "$GC" "$domain" "$EC" >&3
     done
 
     ohrm_print "\n"
 
-    printf "To configure auto-renewal of your SSL certificates, please run '%borangehrm ssl configure-auto-renew%b' from your terminal\n\n" "$GC" "$EC" >&3
+    printf "To configure auto-renewal of your SSL certificates, please run '%borangehrm ssl auto-renew%b' from your terminal\n\n" "$GC" "$EC" >&3
 else
     ohrm_print "Something went wrong! Please try again\n\n"
 fi
