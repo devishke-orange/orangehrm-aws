@@ -199,10 +199,6 @@ update_configuration() {
   docker exec orangehrm sed -i "s/\$useSameDbUser/true/" $installer_command_file
   docker exec orangehrm sed -i "s/\$password/\"$password\"/" $installer_command_file
 
-
-  # TODO REMOVE!!!!
-  docker exec orangehrm sed -i "s/ospenguin/ospenguin-beta/" /var/www/html/src/lib/config/Config.php
-
 	print_progress_message "Updating install configuration" success rewrite
 }
 
