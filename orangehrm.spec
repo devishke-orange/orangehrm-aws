@@ -1,11 +1,12 @@
-Name:           orangehrm
-Version:        0.0.1
-Release:        1%{?dist}
-Summary:        CLI utility for managing an OHRM AWS Instance
+Name:           orangehrm-aws-cli
+Version:        0.0.2
+Release:        2%{?dist}
+Distribution:   Amazon Linux 2023
+Summary:        CLI Utility for user-friendly installation and management of the OrangeHRM 5 on Amazon Linux 2023
 
-License:        MIT
-URL:            https://github.com/devishke-orange/orangehrm-aws
-Source0:        orangehrm-0.0.1.tar.gz
+License:        GPLv3
+URL:            https://github.com/orangehrm/os-cloud
+Source0:        orangehrm-aws-cli-0.0.2.tar.gz
 
 Requires:       bash
 Requires:       docker
@@ -14,7 +15,9 @@ Requires:       pwgen
 BuildArch:      noarch
 
 %description
-CLI utility for managing an OrangeHRM AWS Instance
+The OrangeHRM AWS CLI allows you to easily install and manage your OrangeHRM 5 EC2 instance.
+Some features of the CLI include guided installation, simple upgrade, backup creation and restoring, etc.
+SSL certificate generation is also simplified by the inclusion and automation of Certbot.
 
 %prep
 %setup -q
@@ -66,3 +69,6 @@ chown -R ec2-user:ec2-user %{buildroot}/opt/%{name}
 %changelog
 * Mon Nov 20 2023 devishke-orange <devishke@orangehrmlive.com> - 0.0.1-1.amzn2023
 - Package test
+* Mon Jan 08 2024 devishke-orange <devishke@orangehrmlive.com> - 0.0.2-2.amzn2023
+- Addition of SSL commands
+- Changed MIT License to GPLv3 License
