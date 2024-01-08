@@ -23,17 +23,20 @@ jobs:
           docker exec AWS adduser ec2-user
           docker exec --user ec2-user AWS rpmdev-setuptree
 
+      - name: Set version Env Variable
+        run: echo "RPM_VERSION=$(grep Version orangehrm.spec | sed 's/................//')" >> $GITHUB_ENV
+
       - name: Copy files to rpmbuild
         run: |
-          mkdir -p build/orangehrm-aws-cli
-          cp compose.yml build/orangehrm-aws-cli
-          cp orangehrm build/orangehrm-aws-cli
-          cp -r assets build/orangehrm-aws-cli
-          cp -r scripts build/orangehrm-aws-cli
+          mkdir -p build/orangehrm-aws-cli-${RPM_VERSION}
+          cp compose.yml build/orangehrm-aws-cli-${RPM_VERSION}
+          cp orangehrm build/orangehrm-aws-cli-${RPM_VERSION}
+          cp -r assets build/orangehrm-aws-cli-${RPM_VERSION}
+          cp -r scripts build/orangehrm-aws-cli-${RPM_VERSION}
           pushd build
-          tar -cf orangehrm-aws-cli.tar.gz orangehrm-aws-cli
+          tar -cf orangehrm-aws-cli-${RPM_VERSION}.tar.gz orangehrm-aws-cli-${RPM_VERSION}
           popd
-          sudo mv build/orangehrm-aws-cli.tar.gz build/ec2-user/rpmbuild/SOURCES
+          sudo mv build/orangehrm-aws-cli-${RPM_VERSION}.tar.gz build/ec2-user/rpmbuild/SOURCES
           sudo mv orangehrm.spec build/ec2-user/rpmbuild/SPECS
         
       - name: Lint spec file
