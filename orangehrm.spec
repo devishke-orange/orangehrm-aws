@@ -67,8 +67,8 @@ chown -R ec2-user:ec2-user %{buildroot}/opt/%{name}
 /opt/orangehrm/compose.yml
 
 %changelog
-* Mon Nov 20 2023 devishke-orange <devishke@orangehrmlive.com> - 0.0.1-1.amzn2023
-- Package test
 * Mon Jan 08 2024 devishke-orange <devishke@orangehrmlive.com> - 0.0.2-2.amzn2023
 - Addition of SSL commands
 - Changed MIT License to GPLv3 License
+* Mon Nov 20 2023 devishke-orange <devishke@orangehrmlive.com> - 0.0.1-1.amzn2023
+- Package test
