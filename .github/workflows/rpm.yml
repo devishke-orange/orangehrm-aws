@@ -25,15 +25,15 @@ jobs:
 
       - name: Copy files to rpmbuild
         run: |
-          mkdir -p build/orangehrm-0.0.1
-          cp compose.yml build/orangehrm-0.0.1
-          cp orangehrm build/orangehrm-0.0.1
-          cp -r assets build/orangehrm-0.0.1
-          cp -r scripts build/orangehrm-0.0.1
+          mkdir -p build/orangehrm-aws-cli
+          cp compose.yml build/orangehrm-aws-cli
+          cp orangehrm build/orangehrm-aws-cli
+          cp -r assets build/orangehrm-aws-cli
+          cp -r scripts build/orangehrm-aws-cli
           pushd build
-          tar -cf orangehrm-0.0.1.tar.gz orangehrm-0.0.1
+          tar -cf orangehrm-aws-cli.tar.gz orangehrm-aws-cli
           popd
-          sudo mv build/orangehrm-0.0.1.tar.gz build/ec2-user/rpmbuild/SOURCES
+          sudo mv build/orangehrm-aws-cli.tar.gz build/ec2-user/rpmbuild/SOURCES
           sudo mv orangehrm.spec build/ec2-user/rpmbuild/SPECS
         
       - name: Lint spec file

@@ -6,7 +6,7 @@ Summary:        CLI Utility for user-friendly installation and management of the
 
 License:        GPLv3
 URL:            https://github.com/orangehrm/os-cloud
-Source0:        orangehrm-aws-cli-0.0.2.tar.gz
+Source0:        orangehrm-aws-cli.tar.gz
 
 Requires:       bash
 Requires:       docker
