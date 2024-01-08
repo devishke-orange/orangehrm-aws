@@ -24,20 +24,20 @@ SSL certificate generation is also simplified by the inclusion and automation of
 
 %install
 mkdir -p %{buildroot}/%{_bindir}
-install -m 0755 %{name} %{buildroot}/%{_bindir}/%{name}
+install -m 0755 orangehrm %{buildroot}/%{_bindir}/orangehrm
 
-mkdir -p %{buildroot}/opt/%{name}
-cp -r assets %{buildroot}/opt/%{name}
-cp -r scripts %{buildroot}/opt/%{name}
-cp -r compose.yml %{buildroot}/opt/%{name}
+mkdir -p %{buildroot}/opt/orangehrm
+cp -r assets %{buildroot}/opt/orangehrm
+cp -r scripts %{buildroot}/opt/orangehrm
+cp -r compose.yml %{buildroot}/opt/orangehrm
 
 mkdir -p %{buildroot}/etc/profile.d/
-mv %{buildroot}/opt/%{name}/scripts/login_orangehrm %{buildroot}/etc/profile.d/login_orangehrm.sh
+mv %{buildroot}/opt/orangehrm/scripts/login_orangehrm %{buildroot}/etc/profile.d/login_orangehrm.sh
 
-chown -R ec2-user:ec2-user %{buildroot}/opt/%{name}
+chown -R ec2-user:ec2-user %{buildroot}/opt/orangehrm
 
 %files
-%{_bindir}/%{name}
+%{_bindir}/orangehrm
 %defattr(400, -, -, 400)
 
 /opt/orangehrm/assets/maintenance.php
