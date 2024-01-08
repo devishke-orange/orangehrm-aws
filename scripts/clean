@@ -5,8 +5,8 @@ set -x
 set -e
 
 if [[ -z  $OHRM_DIR ]]; then
-    printf "\nPlease run this script from the OrangeHRM command\n" >&3
-    printf "i.e. orangehrm clean\n\n" >&3
+    ohrm_print "\nPlease run this script from the OrangeHRM command\n"
+    ohrm_print "i.e. orangehrm clean\n\n"
     exit 1;
 fi
 
@@ -24,23 +24,37 @@ done
 
 quit_if_input "$NO_REGEX" "$answer" "\nCleaning process aborted!\n\n"
 
-printf "\n" >&3
+ohrm_print "\n"
 
 print_progress_message "Wiping OrangeHRM data" wip
 
-docker compose --file "$COMPOSE_FILE" down
-docker system prune --all --force
-if docker volume inspect orangehrm_orangehrm-data; then
-    docker volume rm orangehrm_orangehrm-data
-fi
+docker compose -f "$COMPOSE_FILE" down
+docker system prune -af
 
 print_progress_message "Wiping OrangeHRM data" success rewrite
 
+print_progress_message "Removing OrangeHRM volumes" wip
+if docker volume inspect "$ORANGEHRM_WEBROOT_VOLUME"; then
+    docker volume rm "$ORANGEHRM_WEBROOT_VOLUME"
+fi
+
+if docker volume inspect "$ORANGEHRM_DB_VOLUME"; then
+    docker volume rm "$ORANGEHRM_DB_VOLUME"
+fi
+
+print_progress_message "Removing OrangeHRM volumes" success rewrite
+
 print_progress_message "Removing OrangeHRM files" wip
-rm --recursive --force "$OHRM_HOME_DIR"
+cp -r "$LOG_DIR" "$HOME/ohrm_logs_$(date +"%Y_%m_%d_%H_%M_%S")"
+rm -rf "$OHRM_HOME_DIR"
 print_progress_message "Removing OrangeHRM files" success rewrite
 
+ohrm_print "\n"
 
-printf "\nAll data related to orangehrm has been wiped!\n\n" >&3
+ohrm_print "All data related to orangehrm has been wiped!\n\n"
+printf "Your log files have been stored at %s\n" "$HOME/ohrm_logs_$(date +"%Y_%m_%d_%H_%M_%S")" >&3
 printf "To reinstall the system please run '%borangehrm install%b'\n\n" "$GC" "$EC" >&3
+
+ohrm_print "NOTE: Generated SSL certificates and server configurations have not been removed\n\n"
+
 exit 0

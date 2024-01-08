@@ -1,6 +1,6 @@
 #!/bin/bash
 
-exec 3>&1 1>>"$LOG_DIR/orangehrm_check_update.log" 2>&1
+exec 3>&1 1>>"$LOG_DIR/orangehrm_backup.log" 2>&1
 set -x
 set -e
 
@@ -22,7 +22,6 @@ err_exit() {
     printf "\n%bSomething has gone wrong!%b\n" "$RC" "$EC" >&3
     cp -rf "$LOG_DIR/$1" "$HOME"
     printf "Please find the relevant long files at %b%s%b\n\n" "$GC" "$HOME/$1" "$EC" >&3
-    cleanup
     exit 1
 }
 

@@ -15,63 +15,53 @@ if [[ -f "$INSTALL_FILE" ]]; then
 	exit 0
 fi
 
-# Setting required variables
-firstName=""
-lastName=""
-email=""
-username=""
 password=""
-orgName=""
-country=""
 answer="no"
-encryptOption=""
-
-nameRegex="^[A-Za-z\s]{1,30}$"
-emailRegex="^[a-zA-Z0-9.!#$%&\'*+\\/=?^_\`{|}~-]+@[a-zA-Z0-9]([a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(\.[a-zA-Z0-9]([a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)+$"
-orgNameRegex="^[A-Za-z\s]{1,100}$"
-usernameRegex="^[A-Za-z]{5,40}$"
-
-# shellcheck disable=SC1091
-source "$HELPER_SCRIPTS_DIR/countries"
 
 check_prereq () {
-
 	print_progress_message "Checking pre-requisites" wip
 
 	# Check if docker is installed
 	if ! [[ $(command -v docker) ]]; then
 		print_progress_message "Checking pre-requisites" error rewrite
-		printf "\nDocker is not installed!\n\n" >&3
+		ohrm_print "\n"
+		ohrm_print "Docker is not installed!\n\n"
 		exit 0
 	fi
 
 	# Check if the docker service is active
 	if [[ $(sudo systemctl is-active docker) = "inactive" ]]; then
 		print_progress_message "Checking pre-requisites" error rewrite
-		printf "\nDocker is not active!\n" >&3
-		printf "Please activate docker using 'sudo systemctl start docker' and retry the installation\n" >&3
-		printf "If you want docker to start on boot you can run 'sudo systemctl enable docker' as well\n\n" >&3
+		ohrm_print "\n"
+		ohrm_print "Docker is not active!\n"
+		ohrm_print "Please activate docker using 'sudo systemctl start docker' and retry the installation\n"
+		ohrm_print "If you want docker to start on boot you can run 'sudo systemctl enable docker' as well\n\n"
 		exit 0
 	fi
 
 	# Check if docker compose is installed
 	if docker compose version 2>&1 | grep -q "docker: 'compose' is not a docker command"; then
 		print_progress_message "Checking pre-requisites" error rewrite
-		printf "\nDocker Compose is not installed!\n\n" >&3
+		ohrm_print "\n"
+		ohrm_print "Docker Compose is not installed!\n\n"
 		exit 0
 	fi
 
 	if ! [[ $(command -v pwgen) ]]; then
 		print_progress_message "Checking pre-requisites" error rewrite
-		printf "\npwgen is not installed!\n\n" >&3
+		ohrm_print "\n"
+		ohrm_print "pwgen is not installed!\n\n"
 		exit 0
 	fi
 
 	print_progress_message "Checking pre-requisites" success rewrite
+
+	ohrm_print "\n"
 }
 
 early_exit () {
-	printf "\n%bQuitting the intstallation%b\n" "$RC" "$EC" >&3
+	ohrm_print "\n"
+	printf "%bQuitting the installation%b\n" "$RC" "$EC" >&3
 	print_progress_message "Cleaning install files" wip
 
 	if [[ -f "$COMPOSE_FILE" ]]; then
@@ -114,14 +104,15 @@ print_installer_input_prompt() {
 get_license_agreement() {
 	print_installer_input_prompt "Please read and agree to the following license" "press enter"
 	read -r
+	less -P "Press ENTER to read more, press q to quit" "$ASSET_DIR/license.txt" >&3
+	tput cuu1 >&3
 	tput cuu1 >&3
 	tput el >&3
-	less -P "Press ENTER to read more, press q to quit" "$ASSET_DIR/license.txt" >&3
 	print_installer_input_prompt "Do you agree to the license" "yes/no"
 	read -rp "> " answer 2>&3
 	
 	while ! yes_no_check "$answer"; do
-		printf "Please enter yes or no\n" >&3
+		ohrm_print "Please enter yes or no\n"
 		read -rp "> " answer 2>&3
 	done
 
@@ -130,224 +121,39 @@ get_license_agreement() {
 	fi
 
 	reset_answer
-}
 
-get_first_name() {
-	print_installer_input_prompt "Enter the admin employee's first name" "required"
-	read -rp "> " firstName 2>&3
-	while ! [[ $firstName =~ $nameRegex ]]; do
-		print_installer_input_error "Enter a valid name!"
-		read -rp "> " firstName 2>&3
-	done
-}
-
-get_last_name() {
-	print_installer_input_prompt "Enter the admin employee's last name" "required"
-	read -rp "> " lastName 2>&3
-	while ! [[ $lastName =~ $nameRegex  ]]; do
-		print_installer_input_error "Enter a valid name"
-		read -rp "> " lastName 2>&3
-	done
-}
-
-get_email() {
-	print_installer_input_prompt "Enter the admin employee's email" "required"
-	read -rp "> " email 2>&3
-	while ! [[ $email =~ $emailRegex  ]]; do
-		print_installer_input_error "Enter a valid email!"
-		read -rp "> " email 2>&3
-	done
-}
-
-get_org_name() {
-	print_installer_input_prompt "Enter the name of your organization" "required"
-	read -rp "> " orgName 2>&3
-	while ! [[ $orgName =~ $orgNameRegex ]]; do
-		print_installer_input_error "Enter a valid name!"
-		read -rp "> " orgName 2>&3
-	done
-}
-
-# shellcheck disable=SC2154
-list_countries() {
-	for code in "${!countries[@]}"; do 
-		printf "%s: %s\n" "$code" "${countries[$code]}" >&3
-	done
-}
-
-# shellcheck disable=SC1091,SC2154,SC2001
-get_country_code() {
-	local countryDir
-	countryDir="$OHRM_DIR/.countries"
-	
-	if [[ -d "$countryDir" ]]; then
-		rm -rf "$countryDir"
-	fi
-
-	mkdir -p "$countryDir"
-	pushd "$countryDir"
-	for code in "${!countries[@]}"; do 
-		touch "$code"	
-	done
-
-	print_installer_input_prompt "Enter your country code" "use TAB for suggestions, type 'list' to view codes"
-	while true; do
-		read -e -r -p "> " country 2>&3
-		# Don't store country in log
-		if [[ -n "$country" ]] && find "$countryDir/$country"; then
-			break
-		elif [[ $country = "list" ]]; then
-			list_countries
-		else
-			print_installer_input_error "Please enter a valid country code!"
-		fi
-	done
-
-	printf "Selected country: %s\n" "${countries[$country]}" >&3
-
-	popd
-	rm -rf "$countryDir"
-}
-
-get_username() {
-	print_installer_input_prompt "Enter the admin username" "between 5-40 characters"
-	read -rp "> " username 2>&3
-	while ! [[ $username =~ $usernameRegex ]]; do
-		print_installer_input_error "Enter a valid username!"
-		read -rp "> " username 2>&3
-	done
-}
-
-get_encrypt() {
-	print_installer_input_prompt "Do you want to enable data encryption?" "yes/no"
-	read -rp "> " answer 2>&3
-	while ! yes_no_check "$answer"; do
-		print_installer_input_error "Please enter yes or no"
-		read -rp "> " answer 2>&3
-	done
-	if [[ $answer =~ $YES_REGEX ]]; then
-		encryptOption="y"
-	else
-		encryptOption="n"
-	fi
-	reset_answer
-}
-
-# Provide field name as first argument
-# Provide field value as second argument
-print_config_line() {
-	printf "%b%-20s%b %s\n" "$GC" "$1:" "$EC" "$2" >&3
-}
-
-show_config() {
-	printf "===============================\n" >&3
-	print_config_line "First Name" "$firstName"
-	print_config_line "Last Name" "$lastName"
-	print_config_line "Work Email" "$email"
-	print_config_line "Org Name" "$orgName"
-	print_config_line "Country" "${countries[$country]}"
-	print_config_line "Username" "$username"
-	print_config_line "Data Encryption" "$encryptOption"
-	printf "===============================\n" >&3
-}
-
-get_config_values() {
-	local fields
-	fields=("First Name" "Last Name" "Work Email" "Org Name" "Country" "Username" "Data Encryption")
-
-	get_first_name
-	get_last_name
-	get_email
-	get_org_name
-	get_country_code
-	get_username
-	get_encrypt
-
-	printf "\nPlease confirm the following\n" >&3
-	show_config
-	print_installer_input_prompt "Are these details correct?" "yes/no"
-	read -rp "> " answer 2>&3
-	
-	while ! yes_no_check "$answer"; do
-		print_installer_input_error "Please enter yes or no"
-	done
-
-	if [[ $answer =~ $NO_REGEX ]]; then
-		for index in "${!fields[@]}"; do
-			printf "%d %s\n" "$((index+1))" "${fields[index]}" >&3
-		done
-
-		printf "\nPlease choose a field to edit (or type 0 to continue)\n" >&3
-		read -rp "> " field 2>&3
-		
-		while true; do
-			case $field in
-				0)
-					break
-					;;
-				1)
-					printf "Current Value: %s\n" "$firstName" >&3
-					get_first_name
-					;;
-				2)
-					printf "Current Value: %s\n" "$lastName" >&3
-					get_last_name
-					;;
-				3)
-					printf "Current Value: %s\n" "$email" >&3
-					get_email
-					;;
-				4)
-					printf "Current Value: %s\n" "$orgName" >&3
-					get_org_name
-					;;
-				5)
-					printf "Current Value: %s\n" "$country" >&3
-					get_country_code
-					;;
-				6)
-					printf "Current Value: %s\n" "$username" >&3
-					get_username
-					;;
-				7)
-					get_encrypt
-					;;
-				*)
-					printf "Invalid Option\n" >&3
-					;;
-			esac
-			show_config
-			
-			printf "\nPlease choose a field to edit (or type 0 to continue)\n" >&3
-			read -rp "> " field 2>&3
-		done
-	fi
-
-	printf "\n"
+	ohrm_print "\n"
 }
 
 write_env() {
+	rm -f "$ENV_FILE"
+	local db_pw
 	# Create a password using pwgen with the following attributes:
 	# 	32 characters long
 	#	Capital letters
 	#	Numbers
 	#	Avoiding special characters as certain characters cause issues
-	printf "MARIADB_ROOT_PW='%s'" "$(pwgen -c -n 32 1)" > "$ENV_FILE"
+	db_pw="$(pwgen -c -n 32 1)"
+	printf "MARIADB_ROOT_PW=%s" "$(echo "$db_pw" | base64)" > "$ENV_FILE"
 }
 
 create_containers() {
 	print_progress_message "Creating the containers" wip
 
-	write_env
+	cp -f "$OHRM_DIR/compose.yml" "$COMPOSE_FILE"
 
-	cp "$OHRM_DIR/compose.yml" "$COMPOSE_FILE"
+  write_env
+  # shellcheck source=/home/ec2-user/.orangehrm/.env
+  source "$ENV_FILE"
 
-	docker compose --env-file "$ENV_FILE" --file "$COMPOSE_FILE" up --detach --remove-orphans
-	
-	docker cp "$ASSET_DIR/maintenance.php" orangehrm:/var/www/html
-	docker exec orangehrm mv index.php BACKUP
-	docker exec orangehrm mv maintenance.php index.php
+  # Create temporary env with decrypted password
+  printf "MARIADB_ROOT_PW=%s" "$(echo "$MARIADB_ROOT_PW" | base64 -d)" > "$ENV_FILE.tmp"
 
+  # Start other containers
+	docker compose --env-file "$ENV_FILE.tmp" --file "$COMPOSE_FILE" up --detach --remove-orphans
+
+	maintenance_mode enable
+	rm -f "$ENV_FILE.tmp"
 	print_progress_message "Creating the containers" success rewrite
 }
 
@@ -362,37 +168,51 @@ update_configuration() {
 
 	# shellcheck source=/home/ec2-user/.orangehrm/.env
 	source "$ENV_FILE"
+	local db_pw_decrypt
+	db_pw_decrypt="$(echo "$MARIADB_ROOT_PW" | base64 -d)"
 
-	docker exec orangehrm sed -i 's/hostName: 127.0.0.1/hostName: mariadb1011/' installer/cli_install_config.yaml
-	docker exec orangehrm sed -i 's/databaseName: orangehrm_mysql/databaseName: orangehrm/' installer/cli_install_config.yaml
-	# GNU sed allows for backslashes as delimiters. May not be compatible with other versions of sed
-	docker exec orangehrm sed -i "s\privilegedDatabasePassword: root\privilegedDatabasePassword: $MARIADB_ROOT_PW\ " installer/cli_install_config.yaml
-	docker exec orangehrm sed -i "s/adminEmployeeFirstName: OrangeHRM/adminEmployeeFirstName: $firstName/" installer/cli_install_config.yaml
-	docker exec orangehrm sed -i "s/adminEmployeeLastName: Admin/adminEmployeeLastName: $lastName/" installer/cli_install_config.yaml 
-	docker exec orangehrm sed -i "s/adminUserName: Admin/adminUserName: $username/" installer/cli_install_config.yaml
-	docker exec orangehrm sed -i "s/adminPassword: Ohrm@1423/adminPassword: $password/" installer/cli_install_config.yaml
-	docker exec orangehrm sed -i "s/workEmail: admin@example.com/workEmail: $email/" installer/cli_install_config.yaml
-	docker exec orangehrm sed -i "s/ name: OrangeHRM/ name: $orgName/" installer/cli_install_config.yaml
-	docker exec orangehrm sed -i "s/country: US/country: $country/" installer/cli_install_config.yaml
-	docker exec orangehrm sed -i "s/enableDataEncryption: n/enableDataEncryption: $encryptOption/" installer/cli_install_config.yaml
-	docker exec orangehrm sed -i "s/registrationConsent: true/registrationConsent: false/" installer/cli_install_config.yaml
+  local line
+  local installer_command_file
+
+	installer_command_file="/var/www/html/installer/Command/InstallOnNewDatabaseCommand.php"
+
+  for line in {343..357}; do
+    docker exec orangehrm sed -i "343 d" $installer_command_file
+  done
+
+  for line in {146..180}; do
+    docker exec orangehrm sed -i "146 d" $installer_command_file
+  done
+
+  docker exec orangehrm sed -i '99d;100d;101d' $installer_command_file
+  docker exec orangehrm sed -i '100a \ \ \ \ \ \ \ \ \$this\->databaseInformation();' $installer_command_file
+  docker exec orangehrm sed -i '101a \ \ \ \ \ \ \ \ \$this\->systemCheck();' $installer_command_file
+
+  docker exec orangehrm sed -i "s/\$dbHost/\"mariadb\"/" $installer_command_file
+  docker exec orangehrm sed -i "s/\$dbPort/\"3306\"/" $installer_command_file
+  docker exec orangehrm sed -i "s/\$dbName/\"orangehrm\"/" $installer_command_file
+  docker exec orangehrm sed -i "s/\$dbUser/\"root\"/" $installer_command_file
+  docker exec orangehrm sed -i "s/\$dbPassword/\"$db_pw_decrypt\"/" $installer_command_file
+  docker exec orangehrm sed -i "s/\`\$ohrmDbUser\`/root/" $installer_command_file
+  docker exec orangehrm sed -i "s/\$ohrmDbUser/\"root\"/" $installer_command_file
+  docker exec orangehrm sed -i "s/\$ohrmDbPassword/\"$db_pw_decrypt\"/" $installer_command_file
+  docker exec orangehrm sed -i "s/\$useSameDbUser/true/" $installer_command_file
+  docker exec orangehrm sed -i "s/\$password/\"$password\"/" $installer_command_file
 
 	print_progress_message "Updating install configuration" success rewrite
 }
 
 install_orangehrm() {
-	print_progress_message "Installing OrangeHRM" wip
+  ohrm_print "\n"
+  ohrm_print "The OrangeHRM CLI Installation will start now.\n\n"
 
 	# Small period for database container to finish initializing.
 	# Installation will fail with a "Connection Refused" error without this
 	sleep 5
 
-	docker exec orangehrm php installer/cli_install.php
+	docker exec -it orangehrm php installer/console install:on-new-database >&3
 
-	docker exec orangehrm rm -f index.php
-	docker exec orangehrm mv BACKUP index.php
-
-	print_progress_message "Installing OrangeHRM" success rewrite
+	maintenance_mode disable
 }
 
 # TO-DO change!!
@@ -407,7 +227,17 @@ write_install_file() {
 		printf "export OHRM_VERSION=%s" "$version"
 	} > "$INSTALL_FILE"
 
-	printf "\n%bOrangeHRM %s is finished installing!%b\n\n" "$GC" "$version" "$EC" >&3
+	printf "%bOrangeHRM %s is finished installing!%b\n\n" "$GC" "$version" "$EC" >&3
+}
+
+enable_ssl_mod() {
+	# Calculate md5sum of .htaccess files and store for SSL checks
+	docker exec orangehrm md5sum .htaccess > "$HTACCESS_INTEGRITY_ORIGINAL_FILE"
+	docker exec orangehrm sed -i "3 d" /var/www/html/.htaccess
+	docker exec orangehrm sed -i '2 a RedirectMatch 404 /(?!\\.well\\-known)\\..*$' /var/www/html/.htaccess
+	docker exec orangehrm md5sum .htaccess > "$HTACCESS_INTEGRITY_SSL_FILE"
+
+	apache_enable_ssl
 }
 
 print_login_steps() {
@@ -419,13 +249,12 @@ print_login_steps() {
 	token=$(curl -s -X PUT "http://169.254.169.254/latest/api/token" -H "X-aws-ec2-metadata-token-ttl-seconds: 21600")
 	ohrmIP=$(curl -s -H "X-aws-ec2-metadata-token: $token" http://169.254.169.254/latest/meta-data/public-ipv4)
 
-	printf "You can log in to your system with the following username and password:\n" >&3
-	printf "Username: %b%s%b\n" "$GC" "$username"  "$EC" >&3
-	printf "Password: %b%s%b\n" "$GC" "$password" "$EC" >&3
+	ohrm_print "You can log in to your system with your admin account username and the following password:\n"
+	printf "  Password: %b%s%b\n\n" "$GC" "$password" "$EC" >&3
 
-	printf "You will be prompted to change your password on first login.\n\n" >&3
+	ohrm_print "You will be prompted to change your password on first login (you will need to change your password before accessing the system via the mobile application)\n\n"
 
-	printf "\nVisit %b%s%b to access your OrangeHRM system\n\n" "$GC" "http://$ohrmIP" "$EC" >&3
+	printf "Visit %b%s%b to access your OrangeHRM system\n\n" "$GC" "http://$ohrmIP" "$EC" >&3
 }
 
 # Catch CTRL-C
@@ -434,12 +263,12 @@ trap early_exit SIGINT
 show_start_message
 check_prereq
 get_license_agreement
-get_config_values
 create_containers
 generate_random_user_password
 update_configuration
 install_orangehrm
 write_install_file
+enable_ssl_mod
 print_login_steps
 
 exit 0

@@ -13,11 +13,14 @@ fi
 dateOfBck=$(date +"%Y/%m/%d")
 timeOfBck=$(date +"%H:%M:%S")
 
-printf "\nA backup of your database, configuration file and compose file will be created\n\n" >&3
+ohrm_print "\n"
+ohrm_print "A backup of your database, configuration file and compose file will be created\n\n"
 print_progress_message "Creating Backup" wip
 
 # shellcheck source=/home/ec2-user/.orangehrm/.env
 source "$ENV_FILE"
+db_pw_decrypt="$(echo "$MARIADB_ROOT_PW" | base64 -d)"
+
 # shellcheck source=/home/ec2-user/.orangehrm/.installed
 source "$INSTALL_FILE"
 
@@ -25,7 +28,7 @@ backupDir="$BACKUP_DIR/ohrm_${OHRM_VERSION}_${dateOfBck//\//}_${timeOfBck//:/}"
 mkdir -p "${backupDir}"
 
 # Dump OrangeHRM database
-docker exec mariadb sh -c "exec mariadb-dump --all-databases -uroot -p${MARIADB_ROOT_PW}" > "${backupDir}/mariadb.sql"
+docker exec mariadb sh -c "exec mariadb-dump --all-databases -uroot -p${db_pw_decrypt}" > "${backupDir}/mariadb.sql"
 
 # Copy compose.yml
 cp "$COMPOSE_FILE" "${backupDir}/compose.yml"

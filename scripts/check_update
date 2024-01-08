@@ -18,7 +18,8 @@ newVersion=$(curl --silent https://raw.githubusercontent.com/devishke-orange/ora
 if [[ "$OHRM_VERSION" = "$newVersion" ]]; then
     printf "\n%bOrangeHRM is up to date%b\n\n" "$GC" "$EC" >&3
 else
-    printf "\nA new version of OrangeHRM is available!\n" >&3
+    ohrm_print "\n"
+    ohrm_print "A new version of OrangeHRM is available!\n"
     printf "Please run '%borangehrm update%b' to upgrade!\n\n" "$GC" "$EC" >&3
 fi
 
